@@ -17,6 +17,27 @@ A full-stack, responsive Campus Event Registration System built for **Lab Experi
 - **Double-Booking Prevention**: Database-level compound unique index `{ eventId, email }` prevents duplicate registrations.
 - **Admin Dashboard**: Full CRUD management for events, real-time registration tables, per-event seat counters, and cancellation controls with instant feedback toasts.
 - **Modern Glassmorphism UI**: Responsive dark theme built with CSS variables, micro-animations, animated canvas/orbs, and accessible ARIA attributes.
+- **E-Ticket & Digital Pass Generator**: Automatic generation of printable passes with unique ticket codes and QR code badges upon confirmed registration.
+- **Interactive Calendar & Schedule View**: Toggle between Grid view and Calendar/Timeline view for campus schedule planning.
+
+---
+
+## 📊 Feature Hierarchy & Implementation Depth
+
+The project follows a structured 10-tier feature roadmap balancing syllabus requirements, architectural depth, and practical lab feasibility:
+
+| Tier | Feature Name | Implementation Depth | Status |
+|:---:|---|---|:---:|
+| **Step 1** | **Event Listing Page** | `GET /api/events` endpoint, dynamic category filtering (`Technical`, `Cultural`, `Sports`, `Workshop`) | ✅ Implemented |
+| **Step 2** | **Event Creation** | `POST /api/events` endpoint with admin modal form & schema validation | ✅ Implemented |
+| **Step 3** | **Registration Form** | Client-side validation (email format, required fields) & `POST /api/registrations` | ✅ Implemented |
+| **Step 4** | **Cancellation Handling** | `PUT /api/registrations/:id/cancel` state transition logic | ✅ Implemented |
+| **Step 5** | **Admin Dashboard** | Real-time attendee aggregation, capacity meters, and per-event tables | ✅ Implemented |
+| **Step 6** | **Capacity Limits** | Real-time seat enforcement (`confirmedCount < capacity`) preventing overbooking | ✅ Implemented |
+| **Step 7** | **Waitlist Auto-Promotion** | Auto-queue on full capacity; automated promotion of `#1` waitlisted student on cancellation via `$inc` | ✅ Implemented |
+| **Step 8** | **Schedule / Calendar View** | Interactive timeline & date-grouped schedule view | ✅ Implemented |
+| **Step 9** | **Digital E-Ticket Booking** | Unique Pass Ticket ID generation, QR code badge, and printable digital pass | ✅ Implemented |
+| **Step 10** | **Extra Enhancements** | Scope-managed extensions (Toast notifications, compound unique DB constraints) | ✅ Implemented |
 
 ---
 

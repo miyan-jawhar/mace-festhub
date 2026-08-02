@@ -146,12 +146,13 @@ input, select, textarea { font-family: inherit; }
 }
 .hero-stats .stat-label { font-size: .8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
 
-/* ── Filter Tabs ───────────────────────────────────────────────────── */
+/* ── Filter Tabs & View Toggle ─────────────────────────────────────── */
 .filter-bar { padding: 32px 24px 0; }
 .filter-bar-inner {
   max-width: 1200px; margin: 0 auto;
   display: flex; gap: 8px; flex-wrap: wrap;
 }
+.filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
 .filter-btn {
   padding: 8px 20px; border-radius: 100px;
   background: var(--bg-surface); border: 1px solid var(--border);
@@ -163,6 +164,59 @@ input, select, textarea { font-family: inherit; }
   background: linear-gradient(135deg, var(--primary), var(--primary-lt));
   border-color: transparent; color: #fff; box-shadow: 0 0 16px var(--primary-glow);
 }
+
+.view-toggle {
+  display: flex; gap: 4px; background: var(--bg-surface);
+  border: 1px solid var(--border); padding: 4px; border-radius: 100px;
+}
+.view-btn {
+  padding: 6px 14px; border-radius: 100px;
+  background: transparent; border: none;
+  color: var(--text-muted); font-size: .8rem; font-weight: 600;
+  transition: var(--transition);
+}
+.view-btn:hover { color: var(--text); }
+.view-btn.active { background: var(--bg-elevated); color: var(--primary-lt); }
+
+/* ── E-Ticket Digital Pass ─────────────────────────────────────────── */
+.ticket-pass-card {
+  background: linear-gradient(135deg, #1e1b4b, #0f172a);
+  border: 1px dashed var(--primary-lt);
+  border-radius: var(--radius);
+  padding: 16px; text-align: left;
+  position: relative; overflow: hidden;
+}
+.ticket-header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,.1); padding-bottom: 8px; margin-bottom: 12px;
+}
+.ticket-brand { font-size: .75rem; font-weight: 700; color: var(--primary-lt); letter-spacing: .05em; text-transform: uppercase; }
+.ticket-code  { font-size: .75rem; font-family: monospace; color: var(--accent); font-weight: 700; }
+.ticket-body  { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ticket-info h4 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.ticket-info p  { font-size: .8rem; color: var(--text-muted); margin-bottom: 4px; }
+.ticket-meta { font-size: .75rem; color: var(--accent); font-weight: 500; }
+.ticket-qr { background: #fff; padding: 6px; border-radius: 8px; display: grid; place-items: center; color: #000; }
+
+/* ── Timeline / Schedule View ──────────────────────────────────────── */
+.events-timeline {
+  max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;
+}
+.timeline-item {
+  display: flex; gap: 20px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 24px; align-items: center; transition: var(--transition);
+}
+.timeline-item:hover { border-color: rgba(124,58,237,.35); transform: translateX(4px); }
+.timeline-date {
+  text-align: center; min-width: 70px;
+  padding-right: 16px; border-right: 1px solid var(--border);
+}
+.timeline-day { font-size: 1.4rem; font-weight: 800; color: var(--primary-lt); line-height: 1; }
+.timeline-month { font-size: .75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+.timeline-details { flex: 1; }
+.timeline-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+.timeline-meta { font-size: .8rem; color: var(--text-muted); }
 
 /* ── Events Grid ───────────────────────────────────────────────────── */
 .events-section { padding: 32px 24px 64px; }

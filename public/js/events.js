@@ -237,13 +237,29 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
         formView.style.display = 'none';
         resultView.style.display = 'block';
 
+        const passCard = document.getElementById('ticket-pass-card');
+        const printBtn = document.getElementById('print-ticket-btn');
+
         if (data.status === 'confirmed') {
             document.getElementById('result-icon').textContent  = '🎉';
             document.getElementById('result-title').textContent = 'Registration Confirmed!';
-            document.getElementById('result-msg').textContent   = `You're all set, ${payload.name}!`;
+            document.getElementById('result-msg').textContent   = `You're all set, ${payload.name}! Here is your E-Ticket Pass:`;
             const badge = document.getElementById('result-badge');
             badge.className = 'result-badge result-confirmed';
-            badge.textContent = '✓ Confirmed';
+            badge.textContent = '✓ Confirmed Pass';
+
+            // Populate Digital Pass Card (Step 9 Feature)
+            const ev = allEvents.find(e => e._id === payload.eventId);
+            const passCode = `MACE-${Math.floor(1000 + Math.random() * 9000)}-${data.registration?._id?.slice(-4).toUpperCase() || 'PASS'}`;
+            
+            document.getElementById('ticket-code').textContent = `#${passCode}`;
+            document.getElementById('ticket-event-name').textContent = ev ? ev.name : 'MACE Campus Event';
+            document.getElementById('ticket-student-info').textContent = `${payload.name} • ${payload.department || 'Student'} (Year ${payload.year})`;
+            document.getElementById('ticket-date').textContent = ev ? formatDate(ev.date) : 'Upcoming Date';
+            document.getElementById('ticket-venue').textContent = ev ? (ev.venue || 'MACE Campus') : 'MACE Campus';
+
+            passCard.style.display = 'block';
+            printBtn.style.display = 'inline-flex';
         } else {
             const pos = data.registration?.waitlistPosition || '?';
             document.getElementById('result-icon').textContent  = '⏳';
@@ -252,6 +268,9 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
             const badge = document.getElementById('result-badge');
             badge.className = 'result-badge result-waitlisted';
             badge.textContent = `Waitlist #${pos}`;
+
+            passCard.style.display = 'none';
+            printBtn.style.display = 'none';
         }
     } catch (err) {
         showToast('Network error. Please try again.', 'error');
@@ -260,6 +279,88 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
         document.getElementById('reg-btn-text').textContent = 'Register Now';
     }
 });
+
+// ── View Switcher (Grid vs Timeline Schedule) ──────────────────────────
+let currentView = 'grid';
+
+const gridBtn     = document.getElementById('view-grid-btn');
+const timelineBtn = document.getElementById('view-timeline-btn');
+
+if (gridBtn && timelineBtn) {
+    gridBtn.addEventListener('click', () => {
+        currentView = 'grid';
+        gridBtn.classList.add('active');
+        timelineBtn.classList.remove('active');
+        applyFilter();
+    });
+    timelineBtn.addEventListener('click', () => {
+        currentView = 'timeline';
+        timelineBtn.classList.add('active');
+        gridBtn.classList.remove('active');
+        applyFilter();
+    });
+}
+
+function renderTimeline(events) {
+    if (!events.length) {
+        grid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+    emptyState.style.display = 'none';
+    grid.style.display = 'flex';
+    grid.className = 'events-timeline';
+
+    grid.innerHTML = events.map(ev => {
+        const d = new Date(ev.date);
+        const day = d.getDate();
+        const month = d.toLocaleDateString('en-IN', { month: 'short' });
+        const st = statusLabel(ev);
+        const full = ev.confirmedCount >= ev.capacity;
+        const past = isPast(ev.date);
+
+        return `
+        <div class="timeline-item">
+          <div class="timeline-date">
+            <div class="timeline-day">${day}</div>
+            <div class="timeline-month">${month}</div>
+          </div>
+          <div class="timeline-details">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="card-cat cat-${ev.category}">${ev.category}</span>
+              <span class="card-status ${st.cls}">${st.text}</span>
+            </div>
+            <h3 class="timeline-title">${ev.name}</h3>
+            <div class="timeline-meta">
+              📍 ${ev.venue || 'TBD'} • 👥 ${ev.confirmedCount}/${ev.capacity} Seats
+            </div>
+          </div>
+          <div>
+            ${past
+              ? `<button class="btn btn-secondary btn-sm" disabled>Ended</button>`
+              : `<button class="btn btn-primary btn-sm" onclick="openModal('${ev._id}')">
+                   ${full ? 'Waitlist' : 'Register'}
+                 </button>`
+            }
+          </div>
+        </div>`;
+    }).join('');
+}
+
+// Modify applyFilter to support both grid and timeline views
+const originalApplyFilter = applyFilter;
+applyFilter = function() {
+    const filtered = activeFilter === 'all'
+        ? allEvents
+        : allEvents.filter(e => e.category === activeFilter);
+        
+    if (currentView === 'timeline') {
+        renderTimeline(filtered);
+    } else {
+        grid.className = 'events-grid';
+        renderCards(filtered);
+    }
+};
 
 // ── Init ───────────────────────────────────────────────────────────────
 fetchEvents();
