@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MACE FestHub Admin Panel — manage events and registrations." />
+  <title>Admin Panel — MACE FestHub</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <!-- ── Navbar ─────────────────────────────────────────────── -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">⚡</span>
+        MACE FestHub
+      </a>
+      <div class="nav-links">
+        <a href="/"           id="nav-home">Events</a>
+        <a href="/admin.html" id="nav-admin" class="active">Admin</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Admin Layout ────────────────────────────────────────── -->
+  <div class="admin-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" role="navigation" aria-label="Admin sidebar">
+      <div class="sidebar-title">Manage</div>
+      <button class="sidebar-btn active" data-panel="dashboard" id="sb-dashboard">
+        <span class="sidebar-icon">📊</span> Dashboard
+      </button>
+      <button class="sidebar-btn" data-panel="add-event" id="sb-add-event">
+        <span class="sidebar-icon">➕</span> Add Event
+      </button>
+      <button class="sidebar-btn" data-panel="events-list" id="sb-events-list">
+        <span class="sidebar-icon">📋</span> All Events
+      </button>
+      <button class="sidebar-btn" data-panel="registrations" id="sb-registrations">
+        <span class="sidebar-icon">👥</span> Registrations
+      </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main" id="admin-main">
+
+      <!-- ── Dashboard ──────────────────────────────────────── -->
+      <section class="admin-section active" id="panel-dashboard">
+        <div class="section-header">
+          <h1 class="section-title">Dashboard</h1>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card primary">
+            <div class="stat-val" id="dash-total-events">—</div>
+            <div class="stat-lbl">Total Events</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-val" id="dash-total-confirmed">—</div>
+            <div class="stat-lbl">Confirmed Registrations</div>
+          </div>
+          <div class="stat-card warning">
+            <div class="stat-val" id="dash-total-waitlisted">—</div>
+            <div class="stat-lbl">On Waitlist</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="dash-total-capacity">—</div>
+            <div class="stat-lbl">Total Capacity</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span>Recent Events</span>
+            <button class="btn btn-outline btn-sm" id="dash-add-btn">+ Add Event</button>
+          </div>
+          <div class="panel-body" style="padding:0; overflow-x:auto;">
+            <table id="dash-events-table">
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Category</th>
+                  <th>Date</th>
+                  <th>Capacity</th>
+                  <th>Confirmed</th>
+                  <th>Waitlist</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="dash-events-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Add Event ──────────────────────────────────────── -->
+      <section class="admin-section" id="panel-add-event">
+        <div class="section-header">
+          <h1 class="section-title" id="add-event-title">Add New Event</h1>
+        </div>
+        <div class="panel">
+          <div class="panel-body">
+            <form id="add-event-form" novalidate>
+              <input type="hidden" id="edit-event-id" />
+              <div class="admin-form">
+                <div class="form-group full">
+                  <label for="ev-name">Event Name *</label>
+                  <input type="text" id="ev-name" placeholder="e.g. CodeFest 2025" required />
+                  <span class="field-error" id="err-ev-name" role="alert"></span>
+                </div>
+                <div class="form-group full">
+                  <label for="ev-desc">Description</label>
+                  <textarea id="ev-desc" rows="3" placeholder="Brief description of the event…"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="ev-date">Date *</label>
+                  <input type="date" id="ev-date" required />
+                  <span class="field-error" id="err-ev-date" role="alert"></span>
+                </div>
+                <div class="form-group">
+                  <label for="ev-venue">Venue</label>
+                  <input type="text" id="ev-venue" placeholder="e.g. Seminar Hall A" />
+                </div>
+                <div class="form-group">
+                  <label for="ev-category">Category *</label>
+                  <select id="ev-category" required>
+                    <option value="">Select category</option>
+                    <option value="technical">Technical</option>
+                    <option value="cultural">Cultural</option>
+                    <option value="sports">Sports</option>
+                    <option value="workshop">Workshop</option>
+                  </select>
+                  <span class="field-error" id="err-ev-cat" role="alert"></span>
+                </div>
+                <div class="form-group">
+                  <label for="ev-capacity">Capacity *</label>
+                  <input type="number" id="ev-capacity" placeholder="50" min="1" required />
+                  <span class="field-error" id="err-ev-cap" role="alert"></span>
+                </div>
+              </div>
+              <div class="form-actions" style="margin-top:20px;">
+                <button type="button" class="btn btn-secondary" id="cancel-edit-btn" style="display:none;">Cancel Edit</button>
+                <button type="submit" class="btn btn-primary" id="save-event-btn">Create Event</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── All Events ─────────────────────────────────────── -->
+      <section class="admin-section" id="panel-events-list">
+        <div class="section-header">
+          <h1 class="section-title">All Events</h1>
+          <button class="btn btn-primary btn-sm" id="events-list-add-btn">+ Add Event</button>
+        </div>
+        <div class="panel" style="overflow-x:auto;">
+          <table id="events-list-table">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Category</th>
+                <th>Date</th>
+                <th>Venue</th>
+                <th>Capacity</th>
+                <th>Confirmed</th>
+                <th>Waitlist</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="events-list-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Registrations ──────────────────────────────────── -->
+      <section class="admin-section" id="panel-registrations">
+        <!-- Event selector view -->
+        <div id="reg-event-select-view">
+          <div class="section-header">
+            <h1 class="section-title">Registrations</h1>
+          </div>
+          <p style="color:var(--text-muted); margin-bottom:20px;">Select an event to view its registrations.</p>
+          <div id="reg-event-cards" class="events-grid"></div>
+        </div>
+
+        <!-- Registration list view -->
+        <div id="reg-list-view" style="display:none;">
+          <button class="back-btn" id="reg-back-btn">← Back to Events</button>
+          <div class="section-header">
+            <h1 class="section-title" id="reg-list-title">Registrations</h1>
+          </div>
+
+          <!-- Stats row for the selected event -->
+          <div class="stats-row" style="margin-bottom:24px;">
+            <div class="stat-card success">
+              <div class="stat-val" id="reg-confirmed-count">—</div>
+              <div class="stat-lbl">Confirmed</div>
+            </div>
+            <div class="stat-card warning">
+              <div class="stat-val" id="reg-waitlist-count">—</div>
+              <div class="stat-lbl">Waitlisted</div>
+            </div>
+            <div class="stat-card primary">
+              <div class="stat-val" id="reg-capacity-display">—</div>
+              <div class="stat-lbl">Capacity</div>
+            </div>
+          </div>
+
+          <div class="panel" style="overflow-x:auto;">
+            <table id="reg-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Department</th>
+                  <th>Year</th>
+                  <th>Status</th>
+                  <th>Position</th>
+                  <th>Registered</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="reg-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ── Confirm Delete Modal ─────────────────────────────────── -->
+  <div id="confirm-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="modal" style="max-width:400px; text-align:center;">
+      <div style="font-size:2.5rem; margin-bottom:12px;">⚠️</div>
+      <h2 class="modal-title" id="confirm-title" style="margin-bottom:8px;">Confirm Action</h2>
+      <p class="modal-subtitle" id="confirm-msg">Are you sure?</p>
+      <div class="form-actions" style="margin-top:24px; justify-content:center;">
+        <button class="btn btn-secondary" id="confirm-cancel-btn">Cancel</button>
+        <button class="btn btn-danger"    id="confirm-ok-btn" style="background:var(--error); color:#fff; border:none; padding:10px 24px; border-radius:var(--radius);">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast Container ─────────────────────────────────────── -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Browse and register for MACE campus fest events — technical, cultural, sports, and workshops." />
+  <title>MACE FestHub — Campus Event Registration</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <!-- ── Navbar ─────────────────────────────────────────────── -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">⚡</span>
+        MACE FestHub
+      </a>
+      <div class="nav-links">
+        <a href="/" class="active" id="nav-home">Events</a>
+        <a href="/admin.html" id="nav-admin">Admin</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Hero ───────────────────────────────────────────────── -->
+  <section class="hero" aria-label="Hero banner">
+    <div class="hero-orbs" aria-hidden="true">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+    <div class="hero-content">
+      <span class="hero-badge">🎓 Mar Athanasius College of Engineering</span>
+      <h1>Discover &amp; Register for<br><span class="gradient-text">Campus Events</span></h1>
+      <p>Technical workshops, cultural programs, sports meets and more — all in one place.</p>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-num" id="stat-events">—</span>
+          <span class="stat-label">Events</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num" id="stat-seats">—</span>
+          <span class="stat-label">Open Seats</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Filter Tabs ─────────────────────────────────────────── -->
+  <div class="filter-bar" role="navigation" aria-label="Category filter">
+    <div class="filter-bar-inner">
+      <button class="filter-btn active" data-filter="all"       id="filter-all">All Events</button>
+      <button class="filter-btn"        data-filter="technical" id="filter-technical">⚙️ Technical</button>
+      <button class="filter-btn"        data-filter="cultural"  id="filter-cultural">🎭 Cultural</button>
+      <button class="filter-btn"        data-filter="sports"    id="filter-sports">🏆 Sports</button>
+      <button class="filter-btn"        data-filter="workshop"  id="filter-workshop">🛠️ Workshop</button>
+    </div>
+  </div>
+
+  <!-- ── Events Grid ─────────────────────────────────────────── -->
+  <main class="events-section" id="main-content">
+    <div id="loading" class="loading-state" aria-live="polite">
+      <div class="spinner" role="status" aria-label="Loading events"></div>
+      <p>Loading events…</p>
+    </div>
+    <div id="events-grid" class="events-grid" aria-label="Event listings" style="display:none;"></div>
+    <div id="empty-state" class="empty-state" style="display:none;" aria-live="polite">
+      <div class="empty-icon">📭</div>
+      <h3>No events found</h3>
+      <p>Check back later or try a different category.</p>
+    </div>
+  </main>
+
+  <!-- ── Registration Modal ─────────────────────────────────── -->
+  <div id="reg-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <button class="modal-close" id="modal-close-btn" aria-label="Close">✕</button>
+
+      <!-- Form view -->
+      <div id="modal-form-view">
+        <h2 class="modal-title" id="modal-title">Register for Event</h2>
+        <p class="modal-subtitle" id="modal-subtitle">Fill in your details below.</p>
+
+        <form id="reg-form" novalidate>
+          <input type="hidden" id="reg-event-id" />
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="reg-name">Full Name <span aria-hidden="true">*</span></label>
+              <input type="text" id="reg-name" placeholder="e.g. Arjun Krishnan" autocomplete="name" required />
+              <span class="field-error" id="err-name" role="alert"></span>
+            </div>
+            <div class="form-group">
+              <label for="reg-email">Email <span aria-hidden="true">*</span></label>
+              <input type="email" id="reg-email" placeholder="name@mace.ac.in" autocomplete="email" required />
+              <span class="field-error" id="err-email" role="alert"></span>
+            </div>
+            <div class="form-group">
+              <label for="reg-phone">Phone</label>
+              <input type="tel" id="reg-phone" placeholder="+91 XXXXX XXXXX" autocomplete="tel" />
+              <span class="field-error" id="err-phone" role="alert"></span>
+            </div>
+            <div class="form-group">
+              <label for="reg-dept">Department</label>
+              <input type="text" id="reg-dept" placeholder="e.g. CSE (DS)" />
+            </div>
+            <div class="form-group">
+              <label for="reg-year">Year of Study <span aria-hidden="true">*</span></label>
+              <select id="reg-year" required>
+                <option value="">Select year</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+              </select>
+              <span class="field-error" id="err-year" role="alert"></span>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="reg-submit-btn">
+              <span id="reg-btn-text">Register Now</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Result view (shown after successful registration) -->
+      <div id="modal-result-view" class="modal-result" style="display:none;">
+        <div class="result-icon" id="result-icon"></div>
+        <div class="result-title" id="result-title"></div>
+        <div class="result-msg"   id="result-msg"></div>
+        <div class="result-badge" id="result-badge"></div>
+        <div class="form-actions" style="margin-top:24px; justify-content:center;">
+          <button class="btn btn-primary" id="result-close-btn" style="max-width:200px;">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast Container ─────────────────────────────────────── -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="/js/events.js"></script>
+</body>
+</html>
