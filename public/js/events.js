@@ -34,6 +34,34 @@ function formatDate(d) {
 
 function isPast(d) { return new Date(d) < new Date(); }
 
+function downloadCalendarICS(eventId) {
+    const ev = allEvents.find(e => e._id === eventId);
+    if (!ev) return;
+    
+    const startDate = new Date(ev.date).toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const icsData = 
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//MACE FestHub//Campus Event System//EN
+BEGIN:VEVENT
+SUMMARY:${ev.name}
+DESCRIPTION:${ev.description || 'MACE Campus Fest Event'}
+LOCATION:${ev.venue || 'MACE Campus'}
+DTSTART:${startDate}
+DTEND:${startDate}
+END:VEVENT
+END:VCALENDAR`;
+
+    const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `${ev.name.replace(/\s+/g, '_')}_reminder.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('📅 Calendar reminder downloaded (.ics)', 'success');
+}
+
 function capacityPercent(confirmed, capacity) {
     return Math.min(100, Math.round((confirmed / capacity) * 100));
 }
@@ -91,13 +119,16 @@ function renderCards(events) {
             </div>
             ${ev.waitlistCount > 0 ? `<div class="waitlist-note">⏳ ${ev.waitlistCount} on waitlist</div>` : ''}
           </div>
-          <div class="card-footer">
+          <div class="card-footer" style="display:flex; flex-direction:column; gap:8px;">
             ${past
               ? `<button class="btn btn-secondary" disabled>Event Ended</button>`
               : `<button class="btn btn-primary" onclick="openModal('${ev._id}')">
                    ${full ? 'Join Waitlist' : 'Register Now'}
                  </button>`
             }
+            <button class="btn btn-outline btn-sm" onclick="downloadCalendarICS('${ev._id}')" title="Download iCal / Google Calendar Reminder">
+              📅 Add to Calendar (.ics)
+            </button>
           </div>
         </article>`;
     }).join('');

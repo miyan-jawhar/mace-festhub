@@ -140,6 +140,26 @@ exports.cancel = async (req, res) => {
     }
 };
 
+// ─── DELETE /api/registrations/email/:email — Cancel by student email ───────
+exports.cancelByEmail = async (req, res) => {
+    try {
+        const { email } = req.params;
+        const { eventId } = req.query;
+
+        const query = { email: email.trim().toLowerCase(), status: { $ne: 'cancelled' } };
+        if (eventId) query.eventId = eventId;
+
+        const reg = await Registration.findOne(query);
+        if (!reg) return res.status(404).json({ error: 'No active registration found for this email' });
+
+        // Delegate to main cancel logic using reg._id
+        req.params.id = reg._id.toString();
+        return exports.cancel(req, res);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 // ─── DELETE /api/registrations/:id — Hard delete (admin) ─────────────────────
 exports.deleteRegistration = async (req, res) => {
     try {
