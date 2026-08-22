@@ -140,32 +140,31 @@ exports.cancel = async (req, res) => {
     }
 };
 
-// ─── DELETE /api/registrations/email/:email — Cancel by student email ───────
-exports.cancelByEmail = async (req, res) => {
-    try {
-        const { email } = req.params;
-        const { eventId } = req.query;
-
-        const query = { email: email.trim().toLowerCase(), status: { $ne: 'cancelled' } };
-        if (eventId) query.eventId = eventId;
-
-        const reg = await Registration.findOne(query);
-        if (!reg) return res.status(404).json({ error: 'No active registration found for this email' });
-
-        // Delegate to main cancel logic using reg._id
-        req.params.id = reg._id.toString();
-        return exports.cancel(req, res);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
-
 // ─── DELETE /api/registrations/:id — Hard delete (admin) ─────────────────────
 exports.deleteRegistration = async (req, res) => {
     try {
         const reg = await Registration.findByIdAndDelete(req.params.id);
         if (!reg) return res.status(404).json({ error: 'Registration not found' });
         res.json({ message: 'Registration deleted' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// ─── GET /api/registrations/student/:email — All active regs for a student ───
+// Used by the student-facing "My Registrations" self-cancel lookup
+exports.getByEmail = async (req, res) => {
+    try {
+        const email = req.params.email.toLowerCase().trim();
+        // Populate eventId to get event name/date/venue/category alongside the registration
+        const registrations = await Registration.find({
+            email,
+            status: { $ne: 'cancelled' },
+        })
+            .populate('eventId', 'name date venue category capacity confirmedCount')
+            .sort({ registeredAt: -1 });
+
+        res.json(registrations);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

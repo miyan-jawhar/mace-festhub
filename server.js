@@ -6,14 +6,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const dns = require('dns');
-
-// Set public DNS servers to resolve MongoDB Atlas SRV records reliably
-try {
-    dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch (e) {
-    console.warn('Could not set custom DNS servers:', e.message);
-}
 
 // Load environment variables from .env
 dotenv.config();

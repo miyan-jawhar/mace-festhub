@@ -6,14 +6,17 @@ const {
     register,
     getRegistrations,
     cancel,
-    cancelByEmail,
     deleteRegistration,
+    getByEmail,
 } = require('../controllers/registrationController');
 
-router.post('/', register);                        // POST   /api/registrations
-router.get('/:eventId', getRegistrations);         // GET    /api/registrations/:eventId
-router.put('/:id/cancel', cancel);                 // PUT    /api/registrations/:id/cancel
-router.delete('/email/:email', cancelByEmail);     // DELETE /api/registrations/email/:email
-router.delete('/:id', deleteRegistration);         // DELETE /api/registrations/:id
+// IMPORTANT: /student/:email must come BEFORE /:eventId
+// otherwise Express matches the literal string "student" as an eventId
+router.get('/student/:email', getByEmail);          // GET    /api/registrations/student/:email
+router.post('/', register);                         // POST   /api/registrations
+router.get('/:eventId', getRegistrations);          // GET    /api/registrations/:eventId
+router.put('/:id/cancel', cancel);                  // PUT    /api/registrations/:id/cancel
+router.delete('/:id', deleteRegistration);          // DELETE /api/registrations/:id
 
 module.exports = router;
+

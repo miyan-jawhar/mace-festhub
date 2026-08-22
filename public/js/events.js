@@ -34,34 +34,6 @@ function formatDate(d) {
 
 function isPast(d) { return new Date(d) < new Date(); }
 
-function downloadCalendarICS(eventId) {
-    const ev = allEvents.find(e => e._id === eventId);
-    if (!ev) return;
-    
-    const startDate = new Date(ev.date).toISOString().replace(/-|:|\.\d\d\d/g, '');
-    const icsData = 
-`BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//MACE FestHub//Campus Event System//EN
-BEGIN:VEVENT
-SUMMARY:${ev.name}
-DESCRIPTION:${ev.description || 'MACE Campus Fest Event'}
-LOCATION:${ev.venue || 'MACE Campus'}
-DTSTART:${startDate}
-DTEND:${startDate}
-END:VEVENT
-END:VCALENDAR`;
-
-    const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.setAttribute('download', `${ev.name.replace(/\s+/g, '_')}_reminder.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('📅 Calendar reminder downloaded (.ics)', 'success');
-}
-
 function capacityPercent(confirmed, capacity) {
     return Math.min(100, Math.round((confirmed / capacity) * 100));
 }
@@ -119,16 +91,13 @@ function renderCards(events) {
             </div>
             ${ev.waitlistCount > 0 ? `<div class="waitlist-note">⏳ ${ev.waitlistCount} on waitlist</div>` : ''}
           </div>
-          <div class="card-footer" style="display:flex; flex-direction:column; gap:8px;">
+          <div class="card-footer">
             ${past
               ? `<button class="btn btn-secondary" disabled>Event Ended</button>`
               : `<button class="btn btn-primary" onclick="openModal('${ev._id}')">
                    ${full ? 'Join Waitlist' : 'Register Now'}
                  </button>`
             }
-            <button class="btn btn-outline btn-sm" onclick="downloadCalendarICS('${ev._id}')" title="Download iCal / Google Calendar Reminder">
-              📅 Add to Calendar (.ics)
-            </button>
           </div>
         </article>`;
     }).join('');
@@ -268,29 +237,13 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
         formView.style.display = 'none';
         resultView.style.display = 'block';
 
-        const passCard = document.getElementById('ticket-pass-card');
-        const printBtn = document.getElementById('print-ticket-btn');
-
         if (data.status === 'confirmed') {
             document.getElementById('result-icon').textContent  = '🎉';
             document.getElementById('result-title').textContent = 'Registration Confirmed!';
-            document.getElementById('result-msg').textContent   = `You're all set, ${payload.name}! Here is your E-Ticket Pass:`;
+            document.getElementById('result-msg').textContent   = `You're all set, ${payload.name}!`;
             const badge = document.getElementById('result-badge');
             badge.className = 'result-badge result-confirmed';
-            badge.textContent = '✓ Confirmed Pass';
-
-            // Populate Digital Pass Card (Step 9 Feature)
-            const ev = allEvents.find(e => e._id === payload.eventId);
-            const passCode = `MACE-${Math.floor(1000 + Math.random() * 9000)}-${data.registration?._id?.slice(-4).toUpperCase() || 'PASS'}`;
-            
-            document.getElementById('ticket-code').textContent = `#${passCode}`;
-            document.getElementById('ticket-event-name').textContent = ev ? ev.name : 'MACE Campus Event';
-            document.getElementById('ticket-student-info').textContent = `${payload.name} • ${payload.department || 'Student'} (Year ${payload.year})`;
-            document.getElementById('ticket-date').textContent = ev ? formatDate(ev.date) : 'Upcoming Date';
-            document.getElementById('ticket-venue').textContent = ev ? (ev.venue || 'MACE Campus') : 'MACE Campus';
-
-            passCard.style.display = 'block';
-            printBtn.style.display = 'inline-flex';
+            badge.textContent = '✓ Confirmed';
         } else {
             const pos = data.registration?.waitlistPosition || '?';
             document.getElementById('result-icon').textContent  = '⏳';
@@ -299,9 +252,6 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
             const badge = document.getElementById('result-badge');
             badge.className = 'result-badge result-waitlisted';
             badge.textContent = `Waitlist #${pos}`;
-
-            passCard.style.display = 'none';
-            printBtn.style.display = 'none';
         }
     } catch (err) {
         showToast('Network error. Please try again.', 'error');
@@ -311,87 +261,148 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
     }
 });
 
-// ── View Switcher (Grid vs Timeline Schedule) ──────────────────────────
-let currentView = 'grid';
-
-const gridBtn     = document.getElementById('view-grid-btn');
-const timelineBtn = document.getElementById('view-timeline-btn');
-
-if (gridBtn && timelineBtn) {
-    gridBtn.addEventListener('click', () => {
-        currentView = 'grid';
-        gridBtn.classList.add('active');
-        timelineBtn.classList.remove('active');
-        applyFilter();
-    });
-    timelineBtn.addEventListener('click', () => {
-        currentView = 'timeline';
-        timelineBtn.classList.add('active');
-        gridBtn.classList.remove('active');
-        applyFilter();
-    });
-}
-
-function renderTimeline(events) {
-    if (!events.length) {
-        grid.style.display = 'none';
-        emptyState.style.display = 'block';
-        return;
-    }
-    emptyState.style.display = 'none';
-    grid.style.display = 'flex';
-    grid.className = 'events-timeline';
-
-    grid.innerHTML = events.map(ev => {
-        const d = new Date(ev.date);
-        const day = d.getDate();
-        const month = d.toLocaleDateString('en-IN', { month: 'short' });
-        const st = statusLabel(ev);
-        const full = ev.confirmedCount >= ev.capacity;
-        const past = isPast(ev.date);
-
-        return `
-        <div class="timeline-item">
-          <div class="timeline-date">
-            <div class="timeline-day">${day}</div>
-            <div class="timeline-month">${month}</div>
-          </div>
-          <div class="timeline-details">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span class="card-cat cat-${ev.category}">${ev.category}</span>
-              <span class="card-status ${st.cls}">${st.text}</span>
-            </div>
-            <h3 class="timeline-title">${ev.name}</h3>
-            <div class="timeline-meta">
-              📍 ${ev.venue || 'TBD'} • 👥 ${ev.confirmedCount}/${ev.capacity} Seats
-            </div>
-          </div>
-          <div>
-            ${past
-              ? `<button class="btn btn-secondary btn-sm" disabled>Ended</button>`
-              : `<button class="btn btn-primary btn-sm" onclick="openModal('${ev._id}')">
-                   ${full ? 'Waitlist' : 'Register'}
-                 </button>`
-            }
-          </div>
-        </div>`;
-    }).join('');
-}
-
-// Modify applyFilter to support both grid and timeline views
-const originalApplyFilter = applyFilter;
-applyFilter = function() {
-    const filtered = activeFilter === 'all'
-        ? allEvents
-        : allEvents.filter(e => e.category === activeFilter);
-        
-    if (currentView === 'timeline') {
-        renderTimeline(filtered);
-    } else {
-        grid.className = 'events-grid';
-        renderCards(filtered);
-    }
-};
-
 // ── Init ───────────────────────────────────────────────────────────────
 fetchEvents();
+
+// ═══════════════════════════════════════════════════════════════════════
+// MY REGISTRATIONS — Student self-cancel section
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── Collapsible toggle ─────────────────────────────────────────────────
+const myRegsToggle  = document.getElementById('my-regs-toggle');
+const myRegsBody    = document.getElementById('my-regs-body');
+const myRegsChevron = document.getElementById('my-regs-chevron');
+
+myRegsToggle.addEventListener('click', toggleMyRegs);
+myRegsToggle.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMyRegs(); }
+});
+
+function toggleMyRegs() {
+    const open = myRegsBody.classList.toggle('open');
+    myRegsChevron.classList.toggle('open', open);
+    myRegsToggle.setAttribute('aria-expanded', open);
+    if (open) document.getElementById('lookup-email').focus();
+}
+
+// ── Email lookup ───────────────────────────────────────────────────────
+const lookupBtn   = document.getElementById('lookup-btn');
+const lookupInput = document.getElementById('lookup-email');
+const resultsDiv  = document.getElementById('my-regs-results');
+
+lookupBtn.addEventListener('click', doLookup);
+lookupInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLookup(); });
+
+async function doLookup() {
+    const email = lookupInput.value.trim();
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+        resultsDiv.innerHTML = `<p class="my-reg-empty" style="color:var(--error);">Please enter a valid email address.</p>`;
+        return;
+    }
+
+    lookupBtn.disabled = true;
+    lookupBtn.textContent = 'Looking up…';
+    resultsDiv.innerHTML = `<p class="my-reg-empty">Searching…</p>`;
+
+    try {
+        const res  = await fetch(`${API}/api/registrations/student/${encodeURIComponent(email)}`);
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Lookup failed');
+
+        if (!data.length) {
+            resultsDiv.innerHTML = `<p class="my-reg-empty">No active registrations found for <strong>${email}</strong>.</p>`;
+            return;
+        }
+
+        renderMyRegs(data);
+    } catch (err) {
+        resultsDiv.innerHTML = `<p class="my-reg-empty" style="color:var(--error);">${err.message}</p>`;
+    } finally {
+        lookupBtn.disabled = false;
+        lookupBtn.textContent = 'Look Up';
+    }
+}
+
+// ── Render results ─────────────────────────────────────────────────────
+function renderMyRegs(regs) {
+    resultsDiv.innerHTML = `<div class="my-regs-list">${regs.map(r => {
+        const ev      = r.eventId;   // populated object from server
+        const evName  = ev?.name  ?? 'Unknown Event';
+        const evDate  = ev?.date  ? formatDate(ev.date) : '—';
+        const evVenue = ev?.venue ?? '—';
+        const evCat   = ev?.category ?? '';
+
+        const statusBadge = r.status === 'confirmed'
+            ? `<span class="status-badge badge-confirmed">✓ Confirmed</span>`
+            : `<span class="status-badge badge-waitlisted">⏳ Waitlist #${r.waitlistPosition}</span>`;
+
+        return `
+        <div class="my-reg-item" id="reg-item-${r._id}">
+          <div class="my-reg-event">
+            <div class="my-reg-event-name">${evName}</div>
+            <div class="my-reg-event-meta">
+              ${evCat ? `<span class="card-cat cat-${evCat}" style="font-size:.65rem; padding:2px 8px;">${evCat}</span>` : ''}
+              <span>📅 ${evDate}</span>
+              <span>📍 ${evVenue}</span>
+            </div>
+          </div>
+          <div class="my-reg-actions">
+            ${statusBadge}
+            <button class="btn btn-danger btn-sm"
+                    id="self-cancel-${r._id}"
+                    onclick="selfCancel('${r._id}', '${evName.replace(/'/g, "\\'")}')">
+              Cancel
+            </button>
+          </div>
+        </div>`;
+    }).join('')}</div>`;
+}
+
+// ── Self-cancel ────────────────────────────────────────────────────────
+async function selfCancel(regId, eventName) {
+    if (!confirm(`Cancel your registration for "${eventName}"?\n\nIf you're confirmed, the next waitlisted student will be promoted automatically.`)) return;
+
+    const btn = document.getElementById(`self-cancel-${regId}`);
+    if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
+
+    try {
+        const res  = await fetch(`${API}/api/registrations/${regId}/cancel`, { method: 'PUT' });
+        const data = await res.json();
+
+        if (!res.ok) {
+            showToast(data.error || 'Cancel failed', 'error');
+            if (btn) { btn.disabled = false; btn.textContent = 'Cancel'; }
+            return;
+        }
+
+        // Remove the item from the list with a fade
+        const item = document.getElementById(`reg-item-${regId}`);
+        if (item) {
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(20px)';
+            item.style.transition = 'opacity .3s ease, transform .3s ease';
+            setTimeout(() => item.remove(), 300);
+        }
+
+        const msg = data.promoted
+            ? `Registration cancelled. ${data.promoted.name} was promoted from the waitlist! 🎉`
+            : 'Your registration has been cancelled.';
+        showToast(msg, data.promoted ? 'success' : 'warning');
+
+        // Refresh event cards so seat counts update
+        fetchEvents();
+
+        // If results list is now empty, show empty state
+        setTimeout(() => {
+            const list = resultsDiv.querySelector('.my-regs-list');
+            if (list && !list.children.length) {
+                resultsDiv.innerHTML = `<p class="my-reg-empty">No more active registrations for this email.</p>`;
+            }
+        }, 400);
+    } catch (err) {
+        showToast('Network error. Please try again.', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = 'Cancel'; }
+    }
+}
+
