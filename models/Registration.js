@@ -35,6 +35,12 @@ const registrationSchema = new mongoose.Schema({
         enum: ['1', '2', '3', '4'],
         required: [true, 'Year of study is required'],
     },
+    // Optional: linked to an authenticated user account
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+    },
     status: {
         type: String,
         enum: ['confirmed', 'waitlisted', 'cancelled'],

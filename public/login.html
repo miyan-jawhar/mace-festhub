@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Sign in or create your MACE FestHub account to register for campus events." />
+  <title>Login — MACE FestHub</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="auth-page">
+
+  <!-- ── Navbar ─────────────────────────────────────────────── -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">⚡</span>
+        MACE FestHub
+      </a>
+      <div class="nav-links">
+        <a href="/">Events</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Auth Container ─────────────────────────────────────── -->
+  <main class="auth-container" id="main-content">
+    <div class="auth-card">
+
+      <!-- Logo / Brand -->
+      <div class="auth-brand">
+        <div class="auth-logo">⚡</div>
+        <h1 class="auth-title">MACE FestHub</h1>
+        <p class="auth-subtitle">Campus Event Registration Portal</p>
+      </div>
+
+      <!-- Tab switcher -->
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" id="tab-login"    role="tab" aria-selected="true"  aria-controls="panel-login">Sign In</button>
+        <button class="auth-tab"        id="tab-register" role="tab" aria-selected="false" aria-controls="panel-register">Register</button>
+      </div>
+
+      <!-- ── Sign-In Panel ──────────────────────────────────── -->
+      <div id="panel-login" role="tabpanel" aria-labelledby="tab-login">
+        <form id="login-form" novalidate>
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" placeholder="you@mace.ac.in" autocomplete="email" required />
+            <span class="field-error" id="err-login-email" role="alert"></span>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <div class="password-wrap">
+              <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password" required />
+              <button type="button" class="password-toggle" id="toggle-login-pw" aria-label="Toggle password visibility">👁</button>
+            </div>
+            <span class="field-error" id="err-login-pw" role="alert"></span>
+          </div>
+          <div class="auth-error-box" id="login-error" style="display:none;"></div>
+          <button type="submit" class="btn btn-primary auth-submit-btn" id="login-submit-btn">
+            <span id="login-btn-text">Sign In</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- ── Register Panel ─────────────────────────────────── -->
+      <div id="panel-register" role="tabpanel" aria-labelledby="tab-register" style="display:none;">
+        <form id="register-form" novalidate>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="reg-name">Full Name *</label>
+              <input type="text" id="reg-name" placeholder="e.g. Arjun Krishnan" autocomplete="name" required />
+              <span class="field-error" id="err-reg-name" role="alert"></span>
+            </div>
+            <div class="form-group full">
+              <label for="reg-email">Email *</label>
+              <input type="email" id="reg-email" placeholder="name@mace.ac.in" autocomplete="email" required />
+              <span class="field-error" id="err-reg-email" role="alert"></span>
+            </div>
+            <div class="form-group full">
+              <label for="reg-password">Password * <span class="label-hint">(min 6 characters)</span></label>
+              <div class="password-wrap">
+                <input type="password" id="reg-password" placeholder="Create a password" autocomplete="new-password" required />
+                <button type="button" class="password-toggle" id="toggle-reg-pw" aria-label="Toggle password visibility">👁</button>
+              </div>
+              <span class="field-error" id="err-reg-pw" role="alert"></span>
+            </div>
+            <div class="form-group">
+              <label for="reg-dept">Department</label>
+              <input type="text" id="reg-dept" placeholder="e.g. CSE (DS)" />
+            </div>
+            <div class="form-group">
+              <label for="reg-year">Year of Study</label>
+              <select id="reg-year">
+                <option value="N/A">— Select —</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label for="reg-phone">Phone</label>
+              <input type="tel" id="reg-phone" placeholder="+91 XXXXX XXXXX" autocomplete="tel" />
+            </div>
+            <div class="form-group full">
+              <label for="reg-role">I am a</label>
+              <select id="reg-role">
+                <option value="student">Student</option>
+                <option value="faculty_advisor">Faculty Advisor (Club FA)</option>
+                <option value="principal">Principal</option>
+              </select>
+            </div>
+          </div>
+          <div class="auth-error-box" id="register-error" style="display:none;"></div>
+          <button type="submit" class="btn btn-primary auth-submit-btn" id="register-submit-btn">
+            <span id="register-btn-text">Create Account</span>
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ── Toast Container ─────────────────────────────────────── -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script type="module" src="/js/login.js"></script>
+</body>
+</html>

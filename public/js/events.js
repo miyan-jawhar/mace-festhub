@@ -1,5 +1,7 @@
 // public/js/events.js — Student-facing event listing and registration logic
 
+import { getUser, getToken, renderNavAuth, authHeaders } from './auth.js';
+
 const API = '';  // Same origin; Express serves these files
 
 // ── State ────────────────────────────────────────────────────────────
@@ -187,13 +189,34 @@ function openModal(eventId) {
         : `📅 ${formatDate(ev.date)}  ·  ${ev.capacity - ev.confirmedCount} seats available`;
     document.getElementById('reg-btn-text').textContent = isFull ? 'Join Waitlist' : 'Register Now';
 
-    // Reset form
-    document.getElementById('reg-form').reset();
+    // Auto-fill from logged-in user profile
+    const user = getUser();
+    if (user) {
+        const nameEl = document.getElementById('reg-name');
+        const emailEl = document.getElementById('reg-email');
+        const deptEl  = document.getElementById('reg-dept');
+        const yearEl  = document.getElementById('reg-year');
+        const phoneEl = document.getElementById('reg-phone');
+        if (nameEl)  { nameEl.value  = user.name        || ''; nameEl.disabled  = true; }
+        if (emailEl) { emailEl.value = user.email       || ''; emailEl.disabled = true; }
+        if (deptEl)  { deptEl.value  = user.department  || ''; }
+        if (yearEl && ['1','2','3','4'].includes(user.year))  yearEl.value = user.year;
+        if (phoneEl) { phoneEl.value = user.phone       || ''; }
+    } else {
+        // Clear any previous auto-fill and re-enable
+        ['reg-name','reg-email','reg-phone','reg-dept'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.value = ''; el.disabled = false; }
+        });
+        document.getElementById('reg-year').value    = '';
+    }
+
+    // Reset form (non-disabled fields)
     clearErrors();
     formView.style.display = 'block';
     resultView.style.display = 'none';
     modal.style.display = 'flex';
-    document.getElementById('reg-name').focus();
+    if (!getUser()) document.getElementById('reg-name').focus();
 }
 
 function closeModal() {
@@ -251,10 +274,14 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
         year:       document.getElementById('reg-year').value,
     };
 
+    const token = getToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     try {
         const res  = await fetch(`${API}/api/registrations`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(payload),
         });
         const data = await res.json();
@@ -394,4 +421,5 @@ applyFilter = function() {
 };
 
 // ── Init ───────────────────────────────────────────────────────────────
+renderNavAuth();
 fetchEvents();

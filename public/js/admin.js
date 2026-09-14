@@ -1,5 +1,16 @@
 // public/js/admin.js — Admin panel logic
 
+import { getUser, requireLogin, renderNavAuth, authHeaders } from './auth.js';
+
+// ── Role guard: only 'admin' users may access this page ───────────────────────
+requireLogin();
+const _adminUser = getUser();
+if (!_adminUser || _adminUser.role !== 'admin') {
+    alert('Access denied. Admin accounts only.');
+    window.location.href = '/';
+}
+renderNavAuth();
+
 const API = '';
 
 // ── State ──────────────────────────────────────────────────────────────
@@ -65,7 +76,7 @@ document.getElementById('confirm-ok-btn').addEventListener('click', () => {
 // ── Fetch all events ────────────────────────────────────────────────────
 async function loadEvents() {
     try {
-        const res = await fetch(`${API}/api/events`);
+        const res = await fetch(`${API}/api/events`, { headers: authHeaders() });
         if (!res.ok) throw new Error('Failed to load events');
         allEvents = await res.json();
         renderDashboard();
@@ -209,7 +220,7 @@ document.getElementById('add-event-form').addEventListener('submit', async (e) =
         const method = editingEventId ? 'PUT' : 'POST';
         const res    = await fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(payload),
         });
         const data = await res.json();
@@ -234,7 +245,7 @@ function deleteEvent(id, name) {
         `Delete "${name}" and all its registrations? This cannot be undone.`,
         async () => {
             try {
-                const res = await fetch(`${API}/api/events/${id}`, { method: 'DELETE' });
+                const res = await fetch(`${API}/api/events/${id}`, { method: 'DELETE', headers: authHeaders() });
                 const data = await res.json();
                 if (!res.ok) { showToast(data.error, 'error'); return; }
                 showToast(data.message, 'success');
@@ -302,7 +313,7 @@ async function viewEventRegistrations(eventId) {
     tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-dim); padding:24px;">Loading…</td></tr>`;
 
     try {
-        const res  = await fetch(`${API}/api/registrations/${eventId}`);
+        const res  = await fetch(`${API}/api/registrations/${eventId}`, { headers: authHeaders() });
         const regs = await res.json();
         if (!res.ok) throw new Error(regs.error);
 
@@ -340,7 +351,7 @@ function cancelReg(regId, name) {
         `Cancel ${name}'s registration? If they were confirmed, the next waitlisted student will be promoted automatically.`,
         async () => {
             try {
-                const res  = await fetch(`${API}/api/registrations/${regId}/cancel`, { method: 'PUT' });
+                const res  = await fetch(`${API}/api/registrations/${regId}/cancel`, { method: 'PUT', headers: authHeaders() });
                 const data = await res.json();
                 if (!res.ok) { showToast(data.error, 'error'); return; }
 

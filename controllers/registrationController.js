@@ -1,18 +1,31 @@
 // controllers/registrationController.js — Registration logic including waitlist auto-promotion
 
 const Registration = require('../models/Registration');
-const Event = require('../models/Event');
+const Event        = require('../models/Event');
 
 // ─── POST /api/registrations — Register a student ────────────────────────────
-// Logic: if seats available → confirmed; else → waitlisted
+// If user is authenticated (optionalAuth), auto-fills name/email/dept/year from profile
 exports.register = async (req, res) => {
-    const { eventId, name, email, phone, department, year } = req.body;
-
-    if (!eventId || !name || !email || !year) {
-        return res.status(400).json({ error: 'eventId, name, email, and year are required' });
-    }
-
     try {
+        let { eventId, name, email, phone, department, year } = req.body;
+
+        // Auto-fill from authenticated user profile
+        if (req.user) {
+            name       = req.user.name;
+            email      = req.user.email;
+            phone      = phone      || req.user.phone      || '';
+            department = department || req.user.department || '';
+            year       = year       || req.user.year       || '1';
+        }
+
+        if (!eventId || !name || !email || !year) {
+            return res.status(400).json({ error: 'eventId, name, email, and year are required' });
+        }
+
+        // Reject if year is not a valid enum value (non-student roles use 'N/A')
+        const validYears = ['1', '2', '3', '4'];
+        if (!validYears.includes(year)) year = '1';
+
         // Check for existing active registration
         const existing = await Registration.findOne({ eventId, email });
         if (existing && existing.status !== 'cancelled') {
@@ -31,16 +44,16 @@ exports.register = async (req, res) => {
 
         let registration;
         let status;
+        const userId = req.user ? req.user._id : null;
 
         if (event.confirmedCount < event.capacity) {
             // ── CONFIRMED path ──
-            // Upsert handles the re-registration case (previously cancelled)
             registration = await Registration.findOneAndUpdate(
                 { eventId, email },
-                { name, phone, department, year, status: 'confirmed', waitlistPosition: null, registeredAt: new Date() },
+                { name, phone, department, year, status: 'confirmed', waitlistPosition: null,
+                  registeredAt: new Date(), userId },
                 { upsert: true, new: true, setDefaultsOnInsert: true }
             );
-            // Atomically increment confirmed count — $inc is safe against concurrent requests
             await Event.findByIdAndUpdate(eventId, { $inc: { confirmedCount: 1 } });
             status = 'confirmed';
         } else {
@@ -48,7 +61,8 @@ exports.register = async (req, res) => {
             const position = event.waitlistCount + 1;
             registration = await Registration.findOneAndUpdate(
                 { eventId, email },
-                { name, phone, department, year, status: 'waitlisted', waitlistPosition: position, registeredAt: new Date() },
+                { name, phone, department, year, status: 'waitlisted', waitlistPosition: position,
+                  registeredAt: new Date(), userId },
                 { upsert: true, new: true, setDefaultsOnInsert: true }
             );
             await Event.findByIdAndUpdate(eventId, { $inc: { waitlistCount: 1 } });
@@ -69,7 +83,7 @@ exports.getRegistrations = async (req, res) => {
     try {
         const registrations = await Registration.find({
             eventId: req.params.eventId,
-            status: { $ne: 'cancelled' }, // exclude cancelled
+            status: { $ne: 'cancelled' },
         }).sort({ status: 1, waitlistPosition: 1, registeredAt: 1 });
 
         res.json(registrations);
@@ -78,8 +92,28 @@ exports.getRegistrations = async (req, res) => {
     }
 };
 
+// ─── GET /api/registrations/student/:email — Look up by email (auth required) ─
+exports.getStudentRegistrations = async (req, res) => {
+    try {
+        // A student can only look up their own registrations;
+        // admin can look up anyone's
+        const email = req.params.email.toLowerCase();
+        if (req.user.role !== 'admin' && req.user.email !== email) {
+            return res.status(403).json({ error: 'You can only view your own registrations' });
+        }
+
+        const registrations = await Registration.find({
+            email,
+            status: { $ne: 'cancelled' },
+        }).populate('eventId', 'name date venue category capacity confirmedCount waitlistCount');
+
+        res.json(registrations);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 // ─── PUT /api/registrations/:id/cancel — Cancel + auto-promote waitlist ──────
-// This is the KEY engineering piece: state-transition logic
 exports.cancel = async (req, res) => {
     try {
         const reg = await Registration.findById(req.params.id);
@@ -88,11 +122,16 @@ exports.cancel = async (req, res) => {
             return res.status(400).json({ error: 'Registration is already cancelled' });
         }
 
-        const wasConfirmed = reg.status === 'confirmed';
+        // Ownership check: logged-in non-admin users can only cancel their own
+        if (req.user && req.user.role !== 'admin' && reg.email !== req.user.email) {
+            return res.status(403).json({ error: 'You can only cancel your own registration' });
+        }
+
+        const wasConfirmed    = reg.status === 'confirmed';
         const prevWaitlistPos = reg.waitlistPosition;
 
         // Step 1: Mark as cancelled
-        reg.status = 'cancelled';
+        reg.status           = 'cancelled';
         reg.waitlistPosition = null;
         await reg.save();
 
@@ -102,7 +141,7 @@ exports.cancel = async (req, res) => {
             // Step 2: Free up one confirmed seat
             await Event.findByIdAndUpdate(reg.eventId, { $inc: { confirmedCount: -1 } });
 
-            // Step 3: Promote the first waitlisted student (position = 1)
+            // Step 3: Promote first waitlisted student
             promoted = await Registration.findOneAndUpdate(
                 { eventId: reg.eventId, status: 'waitlisted', waitlistPosition: 1 },
                 { status: 'confirmed', waitlistPosition: null },
@@ -110,18 +149,18 @@ exports.cancel = async (req, res) => {
             );
 
             if (promoted) {
-                // Step 4: Shift remaining waitlist positions down by 1
+                // Step 4: Shift remaining waitlist positions down
                 await Registration.updateMany(
                     { eventId: reg.eventId, status: 'waitlisted' },
                     { $inc: { waitlistPosition: -1 } }
                 );
-                // Step 5: Update event counts (one confirmed added, one waitlisted removed)
+                // Step 5: Update event counts
                 await Event.findByIdAndUpdate(reg.eventId, {
                     $inc: { confirmedCount: 1, waitlistCount: -1 },
                 });
             }
         } else {
-            // Was waitlisted — shift positions of those behind this student
+            // Was waitlisted — shift those behind this student
             await Registration.updateMany(
                 { eventId: reg.eventId, status: 'waitlisted', waitlistPosition: { $gt: prevWaitlistPos } },
                 { $inc: { waitlistPosition: -1 } }
@@ -152,7 +191,6 @@ exports.cancelByEmail = async (req, res) => {
         const reg = await Registration.findOne(query);
         if (!reg) return res.status(404).json({ error: 'No active registration found for this email' });
 
-        // Delegate to main cancel logic using reg._id
         req.params.id = reg._id.toString();
         return exports.cancel(req, res);
     } catch (err) {

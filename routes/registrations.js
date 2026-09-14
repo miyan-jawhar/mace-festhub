@@ -1,19 +1,25 @@
 // routes/registrations.js — Registration API routes
 
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 const {
     register,
     getRegistrations,
+    getStudentRegistrations,
     cancel,
     cancelByEmail,
     deleteRegistration,
 } = require('../controllers/registrationController');
+const { optionalAuth, requireAuth, requireRole } = require('../middleware/auth');
 
-router.post('/', register);                        // POST   /api/registrations
-router.get('/:eventId', getRegistrations);         // GET    /api/registrations/:eventId
-router.put('/:id/cancel', cancel);                 // PUT    /api/registrations/:id/cancel
-router.delete('/email/:email', cancelByEmail);     // DELETE /api/registrations/email/:email
-router.delete('/:id', deleteRegistration);         // DELETE /api/registrations/:id
+// IMPORTANT: /student/:email must come before /:eventId to prevent Express
+// matching the literal string "student" as a MongoDB ObjectId
+router.get( '/student/:email', requireAuth, getStudentRegistrations); // GET  /api/registrations/student/:email
+
+router.post('/',                 optionalAuth, register);              // POST /api/registrations
+router.get( '/:eventId',         getRegistrations);                    // GET  /api/registrations/:eventId
+router.put( '/:id/cancel',       optionalAuth, cancel);                // PUT  /api/registrations/:id/cancel
+router.delete('/email/:email',   requireAuth, cancelByEmail);          // DELETE /api/registrations/email/:email
+router.delete('/:id',            requireAuth, requireRole('admin'), deleteRegistration); // DELETE /api/registrations/:id
 
 module.exports = router;

@@ -505,3 +505,54 @@ tr:hover td { background:rgba(255,255,255,.02); }
   .events-grid { grid-template-columns:1fr; }
   .hero h1 { font-size:1.9rem; }
 }
+
+/* ── Auth Pages ────────────────────────────────────────────────────────────── */
+.auth-page { display: flex; flex-direction: column; min-height: 100vh; }
+.auth-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+.auth-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 40px; width: 100%; max-width: 440px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
+.auth-brand { text-align: center; margin-bottom: 30px; }
+.auth-logo { font-size: 40px; margin-bottom: 10px; }
+.auth-title { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 5px; }
+.auth-subtitle { color: var(--text-muted); font-size: 0.9rem; }
+.auth-tabs { display: flex; gap: 10px; margin-bottom: 30px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: var(--radius); }
+.auth-tab { flex: 1; padding: 10px; border-radius: 8px; text-align: center; color: var(--text-muted); font-weight: 500; font-size: 0.95rem; background: transparent; transition: var(--transition); border: 1px solid transparent; }
+.auth-tab.active { background: var(--primary); color: #fff; border-color: var(--primary-lt); box-shadow: 0 4px 15px var(--primary-glow); }
+.auth-tab:not(.active):hover { color: #fff; background: rgba(255,255,255,0.05); }
+.password-wrap { position: relative; }
+.password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; }
+.password-toggle:hover { color: #fff; }
+.auth-submit-btn { width: 100%; padding: 14px; font-size: 1rem; margin-top: 10px; }
+.label-hint { font-size: 0.8em; font-weight: normal; color: var(--text-dim); }
+.auth-error-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--error); padding: 12px 15px; border-radius: var(--radius); margin-bottom: 20px; font-size: 0.9rem; text-align: center; }
+.nav-logout-btn { margin-left: 10px; }
+
+/* ── Profile Layout (reusing admin layout classes) ─────────────────────────── */
+#profile-layout .sidebar-btn { justify-content: flex-start; padding: 12px 20px; border-radius: 8px; margin: 4px 12px; width: calc(100% - 24px); }
+#profile-layout .sidebar-icon { font-size: 1.2rem; margin-right: 12px; width: 24px; text-align: center; }
+.sidebar-title { color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px 24px; font-weight: 600; }
+.sidebar-divider { height: 1px; background: var(--border); margin: 15px 20px; }
+.badge-count { background: var(--error); color: #fff; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 10px; margin-left: auto; display: inline-flex; align-items: center; justify-content: center; min-width: 18px; }
+
+/* ── Registration Cards (Profile) ─────────────────────────────────────────── */
+.reg-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; transition: var(--transition); }
+.reg-card:hover { border-color: rgba(255,255,255,0.15); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+.reg-card-info { flex: 1; display: flex; justify-content: space-between; align-items: center; padding-right: 20px; }
+.reg-card-event { font-weight: 600; font-size: 1.1rem; color: #fff; margin-bottom: 6px; }
+.reg-card-meta { color: var(--text-muted); font-size: 0.85rem; }
+.reg-card-actions { border-left: 1px solid var(--border); padding-left: 20px; }
+.result-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-block; }
+.result-confirmed { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.result-waitlisted { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+/* ── Proposal Cards ──────────────────────────────────────────────────────── */
+.proposal-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+.proposal-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.proposal-title { font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.proposal-meta { font-size: 0.85rem; color: var(--text-muted); }
+.card-status { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.status-limited { background: rgba(245, 158, 11, 0.15); color: #fbbf24; } /* yellow */
+.status-open { background: rgba(16, 185, 129, 0.15); color: #34d399; } /* green */
+.status-past { background: rgba(239, 68, 68, 0.15); color: #f87171; } /* red */
+.proposal-comment { background: rgba(0,0,0,0.2); border-left: 3px solid var(--primary); padding: 10px 15px; border-radius: 0 8px 8px 0; margin-top: 12px; font-size: 0.9rem; color: var(--text); }
+.proposal-actions { display: flex; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+

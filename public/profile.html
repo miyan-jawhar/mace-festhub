@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Your MACE FestHub profile — manage registrations, update details, and propose events." />
+  <title>My Profile — MACE FestHub</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <!-- ── Navbar ─────────────────────────────────────────────── -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">⚡</span>
+        MACE FestHub
+      </a>
+      <div class="nav-links">
+        <a href="/" id="nav-home">Events</a>
+        <!-- Auth links injected by auth.js -->
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Profile Layout ─────────────────────────────────────── -->
+  <div class="admin-layout" id="profile-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" role="navigation" aria-label="Profile sidebar">
+      <div class="sidebar-title">My Account</div>
+
+      <button class="sidebar-btn active" data-panel="my-registrations" id="sb-my-regs">
+        <span class="sidebar-icon">🎟️</span> My Registrations
+      </button>
+      <button class="sidebar-btn" data-panel="manage-profile" id="sb-profile">
+        <span class="sidebar-icon">👤</span> Manage Profile
+      </button>
+
+      <!-- Shown only to club officers -->
+      <div id="officer-section" style="display:none;">
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-title" style="margin-top:8px;">Club Actions</div>
+        <button class="sidebar-btn" data-panel="propose-event" id="sb-propose">
+          <span class="sidebar-icon">📋</span> Propose Event
+        </button>
+        <button class="sidebar-btn" data-panel="my-proposals" id="sb-my-proposals">
+          <span class="sidebar-icon">📂</span> My Proposals
+        </button>
+      </div>
+
+      <!-- Shown only to FA / Principal / Admin -->
+      <div id="approver-section" style="display:none;">
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-title" style="margin-top:8px;">Approvals</div>
+        <button class="sidebar-btn" data-panel="pending-approvals" id="sb-pending">
+          <span class="sidebar-icon">⏳</span> Pending Approvals
+          <span class="badge-count" id="pending-badge" style="display:none;"></span>
+        </button>
+      </div>
+
+      <!-- Admin-only shortcut -->
+      <div id="admin-shortcut-section" style="display:none;">
+        <div class="sidebar-divider"></div>
+        <a href="/admin.html" class="sidebar-btn" style="text-decoration:none; display:flex; align-items:center; gap:10px;">
+          <span class="sidebar-icon">⚙️</span> Admin Panel
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main" id="profile-main">
+
+      <!-- ── My Registrations ───────────────────────────────── -->
+      <section class="admin-section active" id="panel-my-registrations">
+        <div class="section-header">
+          <h1 class="section-title">My Registrations</h1>
+        </div>
+        <div id="my-regs-loading" class="loading-state">
+          <div class="spinner"></div><p>Loading your registrations…</p>
+        </div>
+        <div id="my-regs-empty" class="empty-state" style="display:none;">
+          <div class="empty-icon">🎟️</div>
+          <h3>No active registrations</h3>
+          <p><a href="/" style="color:var(--primary)">Browse events</a> and sign up for something!</p>
+        </div>
+        <div id="my-regs-list" style="display:none;"></div>
+      </section>
+
+      <!-- ── Manage Profile ─────────────────────────────────── -->
+      <section class="admin-section" id="panel-manage-profile">
+        <div class="section-header">
+          <h1 class="section-title">Manage Profile</h1>
+        </div>
+        <div class="panel">
+          <div class="panel-body">
+            <form id="profile-form" novalidate>
+              <div class="admin-form">
+                <div class="form-group full">
+                  <label for="pf-name">Full Name *</label>
+                  <input type="text" id="pf-name" required />
+                  <span class="field-error" id="err-pf-name" role="alert"></span>
+                </div>
+                <div class="form-group full">
+                  <label for="pf-email">Email <span style="color:var(--text-muted); font-size:.85em;">(cannot change)</span></label>
+                  <input type="email" id="pf-email" disabled />
+                </div>
+                <div class="form-group">
+                  <label for="pf-dept">Department</label>
+                  <input type="text" id="pf-dept" placeholder="e.g. CSE (DS)" />
+                </div>
+                <div class="form-group">
+                  <label for="pf-year">Year of Study</label>
+                  <select id="pf-year">
+                    <option value="N/A">— Not applicable —</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                  </select>
+                </div>
+                <div class="form-group full">
+                  <label for="pf-phone">Phone</label>
+                  <input type="tel" id="pf-phone" placeholder="+91 XXXXX XXXXX" />
+                </div>
+                <div class="form-group full">
+                  <label for="pf-role">Role <span style="color:var(--text-muted); font-size:.85em;">(set by admin)</span></label>
+                  <input type="text" id="pf-role" disabled />
+                </div>
+              </div>
+              <div class="form-actions" style="margin-top:20px;">
+                <button type="submit" class="btn btn-primary" id="save-profile-btn">
+                  <span id="save-profile-text">Save Changes</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- Change Password -->
+            <div class="panel" style="margin-top:24px; background:var(--bg-elevated);">
+              <div class="panel-header"><span>Change Password</span></div>
+              <div class="panel-body">
+                <form id="pw-form" novalidate>
+                  <div class="admin-form">
+                    <div class="form-group full">
+                      <label for="pw-current">Current Password</label>
+                      <input type="password" id="pw-current" placeholder="Current password" />
+                      <span class="field-error" id="err-pw-current" role="alert"></span>
+                    </div>
+                    <div class="form-group">
+                      <label for="pw-new">New Password</label>
+                      <input type="password" id="pw-new" placeholder="New password (min 6 chars)" />
+                      <span class="field-error" id="err-pw-new" role="alert"></span>
+                    </div>
+                    <div class="form-group">
+                      <label for="pw-confirm">Confirm New Password</label>
+                      <input type="password" id="pw-confirm" placeholder="Repeat new password" />
+                      <span class="field-error" id="err-pw-confirm" role="alert"></span>
+                    </div>
+                  </div>
+                  <div class="form-actions" style="margin-top:16px;">
+                    <button type="submit" class="btn btn-outline" id="change-pw-btn">Update Password</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Propose Event ──────────────────────────────────── -->
+      <section class="admin-section" id="panel-propose-event">
+        <div class="section-header">
+          <h1 class="section-title">Propose an Event</h1>
+        </div>
+        <p style="color:var(--text-muted); margin-bottom:20px;">
+          Submit an event proposal for your club. It will be reviewed by your Faculty Advisor, then the Principal. Once approved, the event will appear on the events page automatically.
+        </p>
+        <div class="panel">
+          <div class="panel-body">
+            <form id="proposal-form" novalidate>
+              <div class="admin-form">
+                <div class="form-group full">
+                  <label for="prop-club">Club *</label>
+                  <select id="prop-club" required>
+                    <option value="">Loading your clubs…</option>
+                  </select>
+                  <span class="field-error" id="err-prop-club" role="alert"></span>
+                </div>
+                <div class="form-group full">
+                  <label for="prop-title">Event Title *</label>
+                  <input type="text" id="prop-title" placeholder="e.g. CodeFest 2026" required />
+                  <span class="field-error" id="err-prop-title" role="alert"></span>
+                </div>
+                <div class="form-group full">
+                  <label for="prop-desc">Description</label>
+                  <textarea id="prop-desc" rows="3" placeholder="Brief description of the event…"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="prop-date">Proposed Date *</label>
+                  <input type="date" id="prop-date" required />
+                  <span class="field-error" id="err-prop-date" role="alert"></span>
+                </div>
+                <div class="form-group">
+                  <label for="prop-time">Time</label>
+                  <input type="time" id="prop-time" />
+                </div>
+                <div class="form-group">
+                  <label for="prop-venue">Venue</label>
+                  <input type="text" id="prop-venue" placeholder="e.g. Seminar Hall A" />
+                </div>
+                <div class="form-group">
+                  <label for="prop-category">Category *</label>
+                  <select id="prop-category" required>
+                    <option value="technical">Technical</option>
+                    <option value="cultural">Cultural</option>
+                    <option value="sports">Sports</option>
+                    <option value="workshop">Workshop</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="prop-capacity">Capacity *</label>
+                  <input type="number" id="prop-capacity" placeholder="50" min="1" required />
+                  <span class="field-error" id="err-prop-cap" role="alert"></span>
+                </div>
+              </div>
+              <div class="form-actions" style="margin-top:20px;">
+                <button type="submit" class="btn btn-primary" id="submit-proposal-btn">
+                  <span id="proposal-btn-text">Submit Proposal</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── My Proposals ───────────────────────────────────── -->
+      <section class="admin-section" id="panel-my-proposals">
+        <div class="section-header">
+          <h1 class="section-title">My Proposals</h1>
+        </div>
+        <div id="my-proposals-loading" class="loading-state">
+          <div class="spinner"></div><p>Loading proposals…</p>
+        </div>
+        <div id="my-proposals-empty" class="empty-state" style="display:none;">
+          <div class="empty-icon">📋</div>
+          <h3>No proposals yet</h3>
+          <p>Use the <strong>Propose Event</strong> tab to submit your first event proposal.</p>
+        </div>
+        <div id="my-proposals-list" style="display:none;"></div>
+      </section>
+
+      <!-- ── Pending Approvals ──────────────────────────────── -->
+      <section class="admin-section" id="panel-pending-approvals">
+        <div class="section-header">
+          <h1 class="section-title">Pending Approvals</h1>
+        </div>
+        <div id="pending-loading" class="loading-state">
+          <div class="spinner"></div><p>Loading pending proposals…</p>
+        </div>
+        <div id="pending-empty" class="empty-state" style="display:none;">
+          <div class="empty-icon">✅</div>
+          <h3>All clear!</h3>
+          <p>No proposals are currently pending your review.</p>
+        </div>
+        <div id="pending-list" style="display:none;"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ── Action Modal (Approve / Reject comment) ─────────────── -->
+  <div id="action-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="action-modal-title">
+    <div class="modal" style="max-width:480px;">
+      <button class="modal-close" id="action-modal-close" aria-label="Close">✕</button>
+      <h2 class="modal-title" id="action-modal-title">Add Comment</h2>
+      <p class="modal-subtitle" id="action-modal-subtitle"></p>
+      <div class="form-group" style="margin-top:16px;">
+        <label for="action-comment">Comment <span style="color:var(--text-muted); font-size:.85em;">(optional)</span></label>
+        <textarea id="action-comment" rows="3" placeholder="Provide feedback or notes…"></textarea>
+      </div>
+      <div class="form-actions" style="margin-top:20px; justify-content:flex-end;">
+        <button class="btn btn-secondary" id="action-cancel-btn">Cancel</button>
+        <button class="btn btn-primary"   id="action-confirm-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast Container ─────────────────────────────────────── -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script type="module" src="/js/profile.js"></script>
+</body>
+</html>
