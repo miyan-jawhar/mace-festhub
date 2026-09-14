@@ -25,15 +25,10 @@
 
   <!-- ── Hero ───────────────────────────────────────────────── -->
   <section class="hero" aria-label="Hero banner">
-    <div class="hero-orbs" aria-hidden="true">
-      <div class="orb orb-1"></div>
-      <div class="orb orb-2"></div>
-      <div class="orb orb-3"></div>
-    </div>
     <div class="hero-content">
-      <span class="hero-badge">🎓 Mar Athanasius College of Engineering</span>
-      <h1>Discover &amp; Register for<br><span class="gradient-text">Campus Events</span></h1>
-      <p>Technical workshops, cultural programs, sports meets and more — all in one place.</p>
+      <span class="hero-badge">Mar Athanasius College of Engineering</span>
+      <h1>Campus Events &amp;<br><span class="gradient-text">Registrations</span></h1>
+      <p>Technical workshops, cultural programs, sports meets and more.</p>
       <div class="hero-stats">
         <div class="stat">
           <span class="stat-num" id="stat-events">—</span>
@@ -47,20 +42,14 @@
     </div>
   </section>
 
-  <!-- ── Filter Tabs & View Toggle ─────────────────────────────── -->
-  <div class="filter-bar" role="navigation" aria-label="Category filter and view switcher">
-    <div class="filter-bar-inner" style="justify-content:space-between; align-items:center;">
-      <div class="filter-tabs">
-        <button class="filter-btn active" data-filter="all"       id="filter-all">All Events</button>
-        <button class="filter-btn"        data-filter="technical" id="filter-technical">⚙️ Technical</button>
-        <button class="filter-btn"        data-filter="cultural"  id="filter-cultural">🎭 Cultural</button>
-        <button class="filter-btn"        data-filter="sports"    id="filter-sports">🏆 Sports</button>
-        <button class="filter-btn"        data-filter="workshop"  id="filter-workshop">🛠️ Workshop</button>
-      </div>
-      <div class="view-toggle">
-        <button class="view-btn active" id="view-grid-btn" title="Grid View">📱 Grid</button>
-        <button class="view-btn"        id="view-timeline-btn" title="Timeline / Calendar View">📅 Schedule</button>
-      </div>
+  <!-- ── Filter Tabs ─────────────────────────────────────────── -->
+  <div class="filter-bar" role="navigation" aria-label="Category filter">
+    <div class="filter-bar-inner">
+      <button class="filter-btn active" data-filter="all"       id="filter-all">All Events</button>
+      <button class="filter-btn"        data-filter="technical" id="filter-technical">⚙️ Technical</button>
+      <button class="filter-btn"        data-filter="cultural"  id="filter-cultural">🎭 Cultural</button>
+      <button class="filter-btn"        data-filter="sports"    id="filter-sports">🏆 Sports</button>
+      <button class="filter-btn"        data-filter="workshop"  id="filter-workshop">🛠️ Workshop</button>
     </div>
   </div>
 
@@ -78,7 +67,32 @@
     </div>
   </main>
 
+  <!-- ── My Registrations (Self-Cancel) ────────────────────── -->
+  <section class="my-regs-section" aria-label="My registrations">
+    <div class="my-regs-inner">
+      <!-- Collapsible header -->
+      <div class="my-regs-header" id="my-regs-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="my-regs-body">
+        <div class="my-regs-title">
+          <span>📋</span> My Registrations
+          <span style="font-size:.75rem; color:var(--t3); font-weight:400;">— Look up or cancel your registration</span>
+        </div>
+        <span class="my-regs-chevron" id="my-regs-chevron" aria-hidden="true">▼</span>
+      </div>
+
+      <!-- Collapsible body -->
+      <div class="my-regs-body" id="my-regs-body" role="region">
+        <div class="lookup-row">
+          <input type="email" id="lookup-email" placeholder="Enter your registered email address…"
+                 autocomplete="email" aria-label="Your email address" />
+          <button class="btn btn-primary" id="lookup-btn">Look Up</button>
+        </div>
+        <div id="my-regs-results"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ── Registration Modal ─────────────────────────────────── -->
+
   <div id="reg-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal">
       <button class="modal-close" id="modal-close-btn" aria-label="Close">✕</button>
@@ -137,44 +151,8 @@
         <div class="result-title" id="result-title"></div>
         <div class="result-msg"   id="result-msg"></div>
         <div class="result-badge" id="result-badge"></div>
-        
-        <!-- E-Ticket Digital Pass (Step 9 Feature) -->
-        <div id="ticket-pass-card" class="ticket-pass-card" style="display:none; margin-top:20px;">
-          <div class="ticket-header">
-            <span class="ticket-brand">⚡ MACE FestHub E-Ticket</span>
-            <span class="ticket-code" id="ticket-code">#MACE-PASS</span>
-          </div>
-          <div class="ticket-body">
-            <div class="ticket-info">
-              <h4 id="ticket-event-name">Event Title</h4>
-              <p id="ticket-student-info">Student Name • Dept</p>
-              <div class="ticket-meta">
-                <span id="ticket-date">Date</span> • <span id="ticket-venue">Venue</span>
-              </div>
-            </div>
-            <div class="ticket-qr" id="ticket-qr">
-              <!-- SVG QR Visualizer -->
-              <svg width="60" height="60" viewBox="0 0 100 100" fill="currentColor">
-                <rect width="100" height="100" fill="#ffffff"/>
-                <rect x="10" y="10" width="30" height="30" fill="#0f172a"/>
-                <rect x="15" y="15" width="20" height="20" fill="#ffffff"/>
-                <rect x="20" y="20" width="10" height="10" fill="#0f172a"/>
-                <rect x="60" y="10" width="30" height="30" fill="#0f172a"/>
-                <rect x="65" y="15" width="20" height="20" fill="#ffffff"/>
-                <rect x="70" y="20" width="10" height="10" fill="#0f172a"/>
-                <rect x="10" y="60" width="30" height="30" fill="#0f172a"/>
-                <rect x="15" y="65" width="20" height="20" fill="#ffffff"/>
-                <rect x="20" y="70" width="10" height="10" fill="#0f172a"/>
-                <rect x="50" y="50" width="15" height="15" fill="#0f172a"/>
-                <rect x="70" y="70" width="20" height="20" fill="#0f172a"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-actions" style="margin-top:24px; justify-content:center; gap:10px;">
-          <button class="btn btn-outline" id="print-ticket-btn" style="display:none; max-width:160px;" onclick="window.print()">🖨️ Print Pass</button>
-          <button class="btn btn-primary" id="result-close-btn" style="max-width:160px;">Done</button>
+        <div class="form-actions" style="margin-top:24px; justify-content:center;">
+          <button class="btn btn-primary" id="result-close-btn" style="max-width:200px;">Done</button>
         </div>
       </div>
     </div>

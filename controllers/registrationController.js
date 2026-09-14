@@ -97,7 +97,7 @@ exports.getStudentRegistrations = async (req, res) => {
     try {
         // A student can only look up their own registrations;
         // admin can look up anyone's
-        const email = req.params.email.toLowerCase();
+        const email = req.params.email.toLowerCase().trim();
         if (req.user.role !== 'admin' && req.user.email !== email) {
             return res.status(403).json({ error: 'You can only view your own registrations' });
         }
@@ -105,7 +105,8 @@ exports.getStudentRegistrations = async (req, res) => {
         const registrations = await Registration.find({
             email,
             status: { $ne: 'cancelled' },
-        }).populate('eventId', 'name date venue category capacity confirmedCount waitlistCount');
+        }).populate('eventId', 'name date venue category capacity confirmedCount waitlistCount')
+          .sort({ registeredAt: -1 });
 
         res.json(registrations);
     } catch (err) {

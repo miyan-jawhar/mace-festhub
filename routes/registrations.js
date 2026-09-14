@@ -7,8 +7,8 @@ const {
     getRegistrations,
     getStudentRegistrations,
     cancel,
-    cancelByEmail,
     deleteRegistration,
+    cancelByEmail,
 } = require('../controllers/registrationController');
 const { optionalAuth, requireAuth, requireRole } = require('../middleware/auth');
 
