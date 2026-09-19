@@ -42,22 +42,24 @@ function switchPanel(panelId) {
     document.getElementById(`panel-${panelId}`)?.classList.add('active');
 
     // Load data for each panel
-    if (panelId === 'my-registrations') loadMyRegistrations();
-    if (panelId === 'manage-profile')   loadProfile();
-    if (panelId === 'propose-event')    loadMyClubsForProposal();
-    if (panelId === 'my-proposals')     loadMyProposals();
+    if (panelId === 'my-registrations')  loadMyRegistrations();
+    if (panelId === 'manage-profile')    loadProfile();
+    if (panelId === 'propose-event')     loadMyClubsForProposal();
+    if (panelId === 'my-proposals')      loadMyProposals();
     if (panelId === 'pending-approvals') loadPendingApprovals();
+    if (panelId === 'manage-users')      loadUserManagement();
 }
 
-// ── Show/hide sidebar sections based on user role ─────────────────────────────
+// ── Show/hide sidebar sections based on user role ────────────────────────────────
 function configureSidebar(user) {
-    // Officer section: visible if user is admin (can always propose) or
-    // will be shown after we check club memberships
     if (['admin'].includes(user.role)) {
         document.getElementById('officer-section').style.display = 'block';
     }
     if (['faculty_advisor', 'principal', 'admin'].includes(user.role)) {
         document.getElementById('approver-section').style.display = 'block';
+    }
+    if (['principal', 'admin'].includes(user.role)) {
+        document.getElementById('user-mgmt-section').style.display = 'block';
     }
     if (user.role === 'admin') {
         document.getElementById('admin-shortcut-section').style.display = 'block';
@@ -162,15 +164,33 @@ window.selfCancel = async function(regId, eventName) {
     } catch { showToast('Network error', 'error'); }
 };
 
-// ── Manage Profile ────────────────────────────────────────────────────────────
+// ── Manage Profile ──────────────────────────────────────────────────
 function loadProfile() {
     const u = currentUser;
     document.getElementById('pf-name').value  = u.name        || '';
     document.getElementById('pf-email').value = u.email       || '';
-    document.getElementById('pf-dept').value  = u.department  || '';
-    document.getElementById('pf-year').value  = u.year        || 'N/A';
     document.getElementById('pf-phone').value = u.phone       || '';
-    document.getElementById('pf-role').value  = u.role        || 'student';
+
+    // Role badge
+    const roleLabels = {
+        student:         { label:'Student',          cls:'prop-status-approved' },
+        faculty_advisor: { label:'Faculty Advisor',  cls:'prop-status-principal' },
+        principal:       { label:'Principal',        cls:'prop-status-rejected' },
+        admin:           { label:'Administrator',    cls:'prop-status-rejected' },
+    };
+    const rl = roleLabels[u.role] || { label: u.role, cls:'' };
+    document.getElementById('profile-role-badge').innerHTML =
+        `<span class="pill ${rl.cls}" style="font-size:.8rem;">${rl.label}</span>`;
+
+    // Student-only fields: dept and year
+    const isStudent = u.role === 'student';
+    document.getElementById('pf-dept-group').style.display = isStudent ? '' : 'none';
+    document.getElementById('pf-year-group').style.display = isStudent ? '' : 'none';
+
+    if (isStudent) {
+        document.getElementById('pf-dept').value = u.department  || '';
+        document.getElementById('pf-year').value = u.year        || 'N/A';
+    }
 }
 
 document.getElementById('profile-form').addEventListener('submit', async (e) => {
@@ -482,3 +502,219 @@ async function init() {
 }
 
 init();
+
+// ── User Management (Principal + Admin only) ──────────────────────────────────
+
+const ROLE_LABELS = {
+    student:         'Student',
+    faculty_advisor: 'Faculty Advisor',
+    principal:       'Principal',
+    admin:           'Admin',
+};
+const ROLE_COLORS = {
+    student:         'prop-status-approved',
+    faculty_advisor: 'prop-status-principal',
+    principal:       'prop-status-rejected',
+    admin:           'prop-status-rejected',
+};
+
+// Track all users for FA dropdowns
+let allUsers = [];
+let allClubs = [];
+
+async function loadUserManagement() {
+    await Promise.all([fetchAllUsers(), fetchAllClubs()]);
+}
+
+async function fetchAllUsers(search = '', roleFilter = '') {
+    const loadEl = document.getElementById('users-loading');
+    const tableEl = document.getElementById('users-table');
+    loadEl.style.display = 'block';
+    tableEl.style.display = 'none';
+
+    try {
+        let url = `${API}/api/auth/users?`;
+        if (search)     url += `search=${encodeURIComponent(search)}&`;
+        if (roleFilter) url += `role=${roleFilter}&`;
+
+        const res  = await fetch(url, { headers: authHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        allUsers = data;
+        renderUsersTable(data);
+    } catch (err) {
+        loadEl.textContent = `Error: ${err.message}`;
+    } finally {
+        loadEl.style.display = 'none';
+    }
+}
+
+function renderUsersTable(users) {
+    const tbody  = document.getElementById('users-tbody');
+    const tableEl = document.getElementById('users-table');
+    const isPrincipal = currentUser.role === 'principal';
+
+    if (!users.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--t2); padding:20px;">No users found.</td></tr>`;
+        tableEl.style.display = 'table';
+        return;
+    }
+
+    tbody.innerHTML = users.map(u => {
+        const roleLabel = ROLE_LABELS[u.role] || u.role;
+        const roleClass = ROLE_COLORS[u.role]  || '';
+        const isProtected = u.email === 'principal@mace.ac.in';
+
+        // Role change options — Principal cannot be assigned via UI
+        const roleOptions = ['student', 'faculty_advisor', 'admin']
+            .filter(r => r !== u.role)
+            .map(r => `<option value="${r}">${ROLE_LABELS[r]}</option>`)
+            .join('');
+
+        return `
+        <tr id="user-row-${u._id}">
+          <td style="font-weight:600;">${u.name}</td>
+          <td style="color:var(--t2); font-size:.8rem;">${u.email}</td>
+          <td><span class="pill ${roleClass}">${roleLabel}</span></td>
+          <td style="color:var(--t2); font-size:.8rem;">${u.department || '—'} ${u.year && u.year !== 'N/A' ? `· Y${u.year}` : ''}</td>
+          <td>
+            ${isProtected
+              ? `<span style="color:var(--t3); font-size:.75rem;">Protected</span>`
+              : `<div style="display:flex; gap:6px; align-items:center;">
+                   <select id="role-sel-${u._id}" style="background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); padding:4px 8px; color:var(--t1); font-size:.75rem; outline:none;">
+                     <option value="">Change role…</option>
+                     ${roleOptions}
+                   </select>
+                   <button class="btn btn-outline btn-sm" onclick="changeUserRole('${u._id}', '${u.name}')">Apply</button>
+                 </div>`
+            }
+          </td>
+        </tr>`;
+    }).join('');
+    tableEl.style.display = 'table';
+
+    // Also refresh FA dropdowns in clubs table with updated user list
+    if (allClubs.length) renderClubsTable(allClubs);
+}
+
+window.changeUserRole = async function(userId, userName) {
+    const sel    = document.getElementById(`role-sel-${userId}`);
+    const newRole = sel.value;
+    if (!newRole) { showToast('Select a role first', 'warning'); return; }
+
+    try {
+        const res  = await fetch(`${API}/api/auth/users/${userId}/role`, {
+            method: 'PUT', headers: authHeaders(),
+            body: JSON.stringify({ role: newRole }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Role change failed', 'error'); return; }
+        showToast(`${userName}'s role changed to ${ROLE_LABELS[newRole]} ✓`, 'success');
+        // Update local list and re-render
+        allUsers = allUsers.map(u => u._id === userId ? { ...u, role: newRole } : u);
+        renderUsersTable(allUsers);
+    } catch { showToast('Network error', 'error'); }
+};
+
+// ── Club FA Assignment ────────────────────────────────────────────────────────
+async function fetchAllClubs() {
+    const loadEl  = document.getElementById('clubs-loading');
+    const tableEl = document.getElementById('clubs-table');
+    loadEl.style.display  = 'block';
+    tableEl.style.display = 'none';
+
+    try {
+        const res  = await fetch(`${API}/api/clubs`, { headers: authHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        allClubs = data;
+        renderClubsTable(data);
+    } catch (err) {
+        loadEl.textContent = `Error: ${err.message}`;
+    } finally {
+        loadEl.style.display = 'none';
+    }
+}
+
+function renderClubsTable(clubs) {
+    const tbody   = document.getElementById('clubs-tbody');
+    const tableEl = document.getElementById('clubs-table');
+
+    // Only users with FA role can be assigned as FA
+    const fas = allUsers.filter(u => u.role === 'faculty_advisor');
+
+    if (!clubs.length) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--t2); padding:20px;">No clubs exist yet. Create clubs via the Admin Panel.</td></tr>`;
+        tableEl.style.display = 'table';
+        return;
+    }
+
+    tbody.innerHTML = clubs.map(c => {
+        const currentFA = c.facultyAdvisor
+            ? `${c.facultyAdvisor.name} <span style="color:var(--t3); font-size:.75rem;">(${c.facultyAdvisor.email})</span>`
+            : `<span style="color:var(--t3);">Not assigned</span>`;
+
+        const faOptions = fas.map(u =>
+            `<option value="${u._id}" ${c.facultyAdvisor?._id === u._id ? 'selected' : ''}>${u.name} — ${u.email}</option>`
+        ).join('');
+
+        return `
+        <tr id="club-row-${c._id}">
+          <td style="font-weight:600;">${c.name}${c.description ? `<div style="color:var(--t2); font-size:.75rem; font-weight:400; margin-top:2px;">${c.description}</div>` : ''}</td>
+          <td>${currentFA}</td>
+          <td>
+            ${fas.length
+              ? `<select id="fa-sel-${c._id}" style="background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); padding:4px 8px; color:var(--t1); font-size:.75rem; outline:none; min-width:200px;">
+                   <option value="">— Remove FA —</option>
+                   ${faOptions}
+                 </select>`
+              : `<span style="color:var(--amber); font-size:.78rem;">No Faculty Advisors yet. Grant FA role to a user first.</span>`
+            }
+          </td>
+          <td>
+            ${fas.length
+              ? `<button class="btn btn-outline btn-sm" onclick="assignFA('${c._id}', '${c.name}')">Assign</button>`
+              : '—'
+            }
+          </td>
+        </tr>`;
+    }).join('');
+    tableEl.style.display = 'table';
+}
+
+window.assignFA = async function(clubId, clubName) {
+    const sel   = document.getElementById(`fa-sel-${clubId}`);
+    const faId  = sel.value; // empty string = remove FA
+
+    try {
+        const res  = await fetch(`${API}/api/clubs/${clubId}`, {
+            method: 'PUT', headers: authHeaders(),
+            body: JSON.stringify({ facultyAdvisorId: faId || null }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Assignment failed', 'error'); return; }
+
+        // Update local clubs list
+        allClubs = allClubs.map(c => c._id === clubId ? data : c);
+        renderClubsTable(allClubs);
+        showToast(
+            faId
+                ? `Faculty Advisor assigned to ${clubName} ✓`
+                : `Faculty Advisor removed from ${clubName}`,
+            'success'
+        );
+    } catch { showToast('Network error', 'error'); }
+};
+
+// ── Search/filter wiring for user table ───────────────────────────────────────
+document.getElementById('user-search-btn')?.addEventListener('click', () => {
+    const search = document.getElementById('user-search').value.trim();
+    const role   = document.getElementById('user-role-filter').value;
+    fetchAllUsers(search, role);
+});
+document.getElementById('user-search')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('user-search-btn').click();
+});
+document.getElementById('reload-clubs-btn')?.addEventListener('click', fetchAllClubs);
+

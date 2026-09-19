@@ -29,19 +29,23 @@ exports.getClub = async (req, res) => {
     }
 };
 
-// ─── POST /api/clubs — Create club (admin only) ───────────────────────────────
+// ─── POST /api/clubs — Create club (Principal + Admin) ───────────────────────────
 exports.createClub = async (req, res) => {
     try {
-        const { name, description, facultyAdvisorEmail } = req.body;
+        const { name, description, facultyAdvisorId } = req.body;
         if (!name) return res.status(400).json({ error: 'Club name is required' });
 
-        let fa = null;
-        if (facultyAdvisorEmail) {
-            fa = await User.findOne({ email: facultyAdvisorEmail.toLowerCase(), role: 'faculty_advisor' });
-            if (!fa) return res.status(400).json({ error: 'Faculty advisor not found or not a faculty_advisor role' });
+        let faId = null;
+        if (facultyAdvisorId) {
+            const fa = await User.findById(facultyAdvisorId);
+            if (!fa) return res.status(404).json({ error: 'User not found' });
+            if (fa.role !== 'faculty_advisor') {
+                return res.status(400).json({ error: `${fa.name} does not have the Faculty Advisor role. Assign that role first.` });
+            }
+            faId = fa._id;
         }
 
-        const club = new Club({ name, description, facultyAdvisor: fa?._id || null });
+        const club = new Club({ name, description, facultyAdvisor: faId });
         await club.save();
         await club.populate('facultyAdvisor', 'name email');
         res.status(201).json(club);
@@ -51,20 +55,28 @@ exports.createClub = async (req, res) => {
     }
 };
 
-// ─── PUT /api/clubs/:id — Update club (admin only) ───────────────────────────
+// ─── PUT /api/clubs/:id — Update club name/desc/FA (Principal + Admin) ────────────────
 exports.updateClub = async (req, res) => {
     try {
-        const { name, description, facultyAdvisorEmail } = req.body;
+        const { name, description, facultyAdvisorId } = req.body;
         const club = await Club.findById(req.params.id);
         if (!club) return res.status(404).json({ error: 'Club not found' });
 
-        if (name)        club.name        = name;
+        if (name)                club.name        = name;
         if (description !== undefined) club.description = description;
 
-        if (facultyAdvisorEmail) {
-            const fa = await User.findOne({ email: facultyAdvisorEmail.toLowerCase(), role: 'faculty_advisor' });
-            if (!fa) return res.status(400).json({ error: 'Faculty advisor not found or not a faculty_advisor role' });
-            club.facultyAdvisor = fa._id;
+        if (facultyAdvisorId !== undefined) {
+            if (!facultyAdvisorId) {
+                // Allow clearing the FA
+                club.facultyAdvisor = null;
+            } else {
+                const fa = await User.findById(facultyAdvisorId);
+                if (!fa) return res.status(404).json({ error: 'User not found' });
+                if (fa.role !== 'faculty_advisor') {
+                    return res.status(400).json({ error: `${fa.name} does not have the Faculty Advisor role. Assign that role first.` });
+                }
+                club.facultyAdvisor = fa._id;
+            }
         }
 
         await club.save();

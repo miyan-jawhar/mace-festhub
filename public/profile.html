@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Your MACE FestHub profile — manage registrations, update details, and propose events." />
+  <meta name="description" content="Your MACE FestHub profile — manage registrations, update details, and propose or approve events." />
   <title>My Profile — MACE FestHub</title>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
@@ -16,7 +16,7 @@
         <span class="logo-icon">⚡</span>
         MACE FestHub
       </a>
-      <div class="nav-links">
+      <div class="nav-links" id="nav-links">
         <a href="/" id="nav-home">Events</a>
         <!-- Auth links injected by auth.js -->
       </div>
@@ -37,7 +37,7 @@
         <span class="sidebar-icon">👤</span> Manage Profile
       </button>
 
-      <!-- Shown only to club officers -->
+      <!-- Shown only to club officers (president / secretary) -->
       <div id="officer-section" style="display:none;">
         <div class="sidebar-divider"></div>
         <div class="sidebar-title" style="margin-top:8px;">Club Actions</div>
@@ -59,7 +59,16 @@
         </button>
       </div>
 
-      <!-- Admin-only shortcut -->
+      <!-- Shown only to Principal / Admin -->
+      <div id="user-mgmt-section" style="display:none;">
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-title" style="margin-top:8px;">Administration</div>
+        <button class="sidebar-btn" data-panel="manage-users" id="sb-manage-users">
+          <span class="sidebar-icon">🏛️</span> Manage Users &amp; Clubs
+        </button>
+      </div>
+
+      <!-- Admin-only shortcut to full admin panel -->
       <div id="admin-shortcut-section" style="display:none;">
         <div class="sidebar-divider"></div>
         <a href="/admin.html" class="sidebar-btn" style="text-decoration:none; display:flex; align-items:center; gap:10px;">
@@ -92,6 +101,10 @@
         <div class="section-header">
           <h1 class="section-title">Manage Profile</h1>
         </div>
+
+        <!-- Role badge -->
+        <div id="profile-role-badge" style="margin-bottom:20px;"></div>
+
         <div class="panel">
           <div class="panel-body">
             <form id="profile-form" novalidate>
@@ -102,14 +115,16 @@
                   <span class="field-error" id="err-pf-name" role="alert"></span>
                 </div>
                 <div class="form-group full">
-                  <label for="pf-email">Email <span style="color:var(--text-muted); font-size:.85em;">(cannot change)</span></label>
+                  <label for="pf-email">Email <span style="color:var(--t3); font-size:.85em;">(cannot change)</span></label>
                   <input type="email" id="pf-email" disabled />
                 </div>
-                <div class="form-group">
+
+                <!-- Student-only fields — hidden for FA / Principal / Admin -->
+                <div class="form-group" id="pf-dept-group">
                   <label for="pf-dept">Department</label>
                   <input type="text" id="pf-dept" placeholder="e.g. CSE (DS)" />
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="pf-year-group">
                   <label for="pf-year">Year of Study</label>
                   <select id="pf-year">
                     <option value="N/A">— Not applicable —</option>
@@ -119,13 +134,10 @@
                     <option value="4">4th Year</option>
                   </select>
                 </div>
+
                 <div class="form-group full">
                   <label for="pf-phone">Phone</label>
                   <input type="tel" id="pf-phone" placeholder="+91 XXXXX XXXXX" />
-                </div>
-                <div class="form-group full">
-                  <label for="pf-role">Role <span style="color:var(--text-muted); font-size:.85em;">(set by admin)</span></label>
-                  <input type="text" id="pf-role" disabled />
                 </div>
               </div>
               <div class="form-actions" style="margin-top:20px;">
@@ -136,7 +148,7 @@
             </form>
 
             <!-- Change Password -->
-            <div class="panel" style="margin-top:24px; background:var(--bg-elevated);">
+            <div class="panel" style="margin-top:24px; background:var(--bg-2);">
               <div class="panel-header"><span>Change Password</span></div>
               <div class="panel-body">
                 <form id="pw-form" novalidate>
@@ -172,8 +184,8 @@
         <div class="section-header">
           <h1 class="section-title">Propose an Event</h1>
         </div>
-        <p style="color:var(--text-muted); margin-bottom:20px;">
-          Submit an event proposal for your club. It will be reviewed by your Faculty Advisor, then the Principal. Once approved, the event will appear on the events page automatically.
+        <p style="color:var(--t2); margin-bottom:20px;">
+          Submit an event proposal for your club. It will be reviewed by your Faculty Advisor, then the Principal. Once approved, the event appears on the events page automatically.
         </p>
         <div class="panel">
           <div class="panel-body">
@@ -265,6 +277,69 @@
         <div id="pending-list" style="display:none;"></div>
       </section>
 
+      <!-- ── Manage Users & Clubs (Principal + Admin) ──────── -->
+      <section class="admin-section" id="panel-manage-users">
+        <div class="section-header">
+          <h1 class="section-title">Manage Users &amp; Clubs</h1>
+        </div>
+
+        <!-- User Role Management -->
+        <div class="panel" style="margin-bottom:24px;">
+          <div class="panel-header">
+            <span>👤 User Role Management</span>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input type="text" id="user-search" placeholder="Search by name or email…"
+                style="background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); padding:6px 10px; color:var(--t1); font-size:.8rem; outline:none; width:220px;" />
+              <select id="user-role-filter"
+                style="background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); padding:6px 10px; color:var(--t1); font-size:.8rem; outline:none;">
+                <option value="">All Roles</option>
+                <option value="student">Student</option>
+                <option value="faculty_advisor">Faculty Advisor</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button class="btn btn-outline btn-sm" id="user-search-btn">Search</button>
+            </div>
+          </div>
+          <div class="panel-body" style="padding:0; overflow-x:auto;">
+            <div id="users-loading" style="padding:20px; text-align:center; color:var(--t2);">Loading users…</div>
+            <table id="users-table" style="display:none;">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Current Role</th>
+                  <th>Dept / Year</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Club FA Assignment -->
+        <div class="panel">
+          <div class="panel-header">
+            <span>🏛️ Club Faculty Advisor Assignment</span>
+            <button class="btn btn-outline btn-sm" id="reload-clubs-btn">↻ Refresh</button>
+          </div>
+          <div class="panel-body" style="padding:0; overflow-x:auto;">
+            <div id="clubs-loading" style="padding:20px; text-align:center; color:var(--t2);">Loading clubs…</div>
+            <table id="clubs-table" style="display:none;">
+              <thead>
+                <tr>
+                  <th>Club</th>
+                  <th>Current FA</th>
+                  <th>Assign FA</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="clubs-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -275,7 +350,7 @@
       <h2 class="modal-title" id="action-modal-title">Add Comment</h2>
       <p class="modal-subtitle" id="action-modal-subtitle"></p>
       <div class="form-group" style="margin-top:16px;">
-        <label for="action-comment">Comment <span style="color:var(--text-muted); font-size:.85em;">(optional)</span></label>
+        <label for="action-comment">Comment <span style="color:var(--t3); font-size:.85em;">(optional)</span></label>
         <textarea id="action-comment" rows="3" placeholder="Provide feedback or notes…"></textarea>
       </div>
       <div class="form-actions" style="margin-top:20px; justify-content:flex-end;">

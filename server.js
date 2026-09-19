@@ -54,14 +54,44 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
+// ─── Seed Hardcoded Principal Account ────────────────────────────────────────
+async function seedPrincipal() {
+    const User = require('./models/User');
+    const PRINCIPAL_EMAIL    = process.env.PRINCIPAL_EMAIL    || 'principal@mace.ac.in';
+    const PRINCIPAL_PASSWORD = process.env.PRINCIPAL_PASSWORD || 'principal2026';
+    const PRINCIPAL_NAME     = process.env.PRINCIPAL_NAME     || 'Principal';
+
+    try {
+        const existing = await User.findOne({ email: PRINCIPAL_EMAIL });
+        if (!existing) {
+            const principal = new User({
+                name:     PRINCIPAL_NAME,
+                email:    PRINCIPAL_EMAIL,
+                password: PRINCIPAL_PASSWORD,
+                role:     'principal',
+            });
+            await principal.save();
+            console.log(`✅  Principal account seeded: ${PRINCIPAL_EMAIL}`);
+        } else if (existing.role !== 'principal') {
+            // Enforce role in case it was changed externally
+            existing.role = 'principal';
+            await existing.save();
+            console.log(`⚠️   Principal role restored for: ${PRINCIPAL_EMAIL}`);
+        }
+    } catch (err) {
+        console.error('❌  Failed to seed principal account:', err.message);
+    }
+}
+
 // ─── Connect to MongoDB Atlas & Start Server ──────────────────────────────────
 const PORT      = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
 mongoose
     .connect(MONGO_URI)
-    .then(() => {
+    .then(async () => {
         console.log('✅  Connected to MongoDB Atlas');
+        await seedPrincipal();
         app.listen(PORT, () => {
             console.log(`🚀  Server running at http://localhost:${PORT}`);
         });

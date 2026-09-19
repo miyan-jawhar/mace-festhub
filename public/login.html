@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Sign in or create your MACE FestHub account to register for campus events." />
+  <meta name="description" content="Sign in or create your MACE FestHub student account to register for campus events." />
   <title>Login — MACE FestHub</title>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
@@ -60,10 +60,21 @@
             <span id="login-btn-text">Sign In</span>
           </button>
         </form>
+
+        <!-- Hint for principal / FA -->
+        <p style="margin-top:18px; font-size:.75rem; color:var(--t3); text-align:center;">
+          Faculty Advisors and the Principal sign in here using their assigned credentials.
+        </p>
       </div>
 
       <!-- ── Register Panel ─────────────────────────────────── -->
+      <!-- NOTE: Registration creates student accounts only.
+           FA and Principal roles are assigned by the Principal
+           through the Profile → Manage Users panel. -->
       <div id="panel-register" role="tabpanel" aria-labelledby="tab-register" style="display:none;">
+        <div style="margin-bottom:16px; padding:10px 14px; background:var(--primary-dim); border:1px solid var(--primary-lt); border-radius:var(--r); font-size:.78rem; color:var(--t2);">
+          ℹ️ This form creates a <strong style="color:var(--t1);">student</strong> account. Faculty Advisors and the Principal log in using credentials assigned by the institution.
+        </div>
         <form id="register-form" novalidate>
           <div class="form-grid">
             <div class="form-group full">
@@ -102,18 +113,10 @@
               <label for="reg-phone">Phone</label>
               <input type="tel" id="reg-phone" placeholder="+91 XXXXX XXXXX" autocomplete="tel" />
             </div>
-            <div class="form-group full">
-              <label for="reg-role">I am a</label>
-              <select id="reg-role">
-                <option value="student">Student</option>
-                <option value="faculty_advisor">Faculty Advisor (Club FA)</option>
-                <option value="principal">Principal</option>
-              </select>
-            </div>
           </div>
           <div class="auth-error-box" id="register-error" style="display:none;"></div>
           <button type="submit" class="btn btn-primary auth-submit-btn" id="register-submit-btn">
-            <span id="register-btn-text">Create Account</span>
+            <span id="register-btn-text">Create Student Account</span>
           </button>
         </form>
       </div>

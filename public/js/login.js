@@ -116,7 +116,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     const dept     = document.getElementById('reg-dept').value.trim();
     const year     = document.getElementById('reg-year').value;
     const phone    = document.getElementById('reg-phone').value.trim();
-    const role     = document.getElementById('reg-role').value;
+    // Note: role is NOT collected here — all self-registered accounts are students.
 
     let valid = true;
     ['name','email','pw'].forEach(f => {
@@ -142,7 +142,8 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         const res  = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, password, role, department: dept, year, phone }),
+            body: JSON.stringify({ name, email, password, department: dept, year, phone }),
+            // role is intentionally omitted — server always assigns 'student'
         });
         const data = await res.json();
 
