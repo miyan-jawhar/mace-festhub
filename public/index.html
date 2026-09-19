@@ -16,9 +16,9 @@
         <span class="logo-icon">⚡</span>
         MACE FestHub
       </a>
-      <div class="nav-links">
+      <div class="nav-links" id="nav-links">
         <a href="/" class="active" id="nav-home">Events</a>
-        <!-- Auth links injected by auth.js -->
+        <!-- Auth links injected by auth.js renderNavAuth() -->
       </div>
     </div>
   </nav>
@@ -67,44 +67,31 @@
     </div>
   </main>
 
-  <!-- ── My Registrations (Self-Cancel) ────────────────────── -->
-  <section class="my-regs-section" aria-label="My registrations">
-    <div class="my-regs-inner">
-      <!-- Collapsible header -->
-      <div class="my-regs-header" id="my-regs-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="my-regs-body">
-        <div class="my-regs-title">
-          <span>📋</span> My Registrations
-          <span style="font-size:.75rem; color:var(--t3); font-weight:400;">— Look up or cancel your registration</span>
-        </div>
-        <span class="my-regs-chevron" id="my-regs-chevron" aria-hidden="true">▼</span>
-      </div>
-
-      <!-- Collapsible body -->
-      <div class="my-regs-body" id="my-regs-body" role="region">
-        <div class="lookup-row">
-          <input type="email" id="lookup-email" placeholder="Enter your registered email address…"
-                 autocomplete="email" aria-label="Your email address" />
-          <button class="btn btn-primary" id="lookup-btn">Look Up</button>
-        </div>
-        <div id="my-regs-results"></div>
-      </div>
-    </div>
-  </section>
-
   <!-- ── Registration Modal ─────────────────────────────────── -->
-
   <div id="reg-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal">
       <button class="modal-close" id="modal-close-btn" aria-label="Close">✕</button>
 
-      <!-- Form view -->
+      <!-- Form view: full form for guests, streamlined for logged-in users -->
       <div id="modal-form-view">
         <h2 class="modal-title" id="modal-title">Register for Event</h2>
         <p class="modal-subtitle" id="modal-subtitle">Fill in your details below.</p>
 
+        <!-- Login prompt (shown when not logged in) -->
+        <div id="login-prompt" style="display:none; margin-bottom:16px; padding:12px 14px; background:var(--primary-dim); border:1px solid var(--primary-lt); border-radius:var(--r); font-size:.82rem; color:var(--t2);">
+          <a href="/login.html" style="color:var(--primary-h); font-weight:600;">Log in</a> for a faster experience — your details will be auto-filled.
+        </div>
+
+        <!-- Logged-in quick-confirm strip -->
+        <div id="logged-in-strip" style="display:none; margin-bottom:20px; padding:12px 14px; background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r);">
+          <div style="font-size:.75rem; color:var(--t2); margin-bottom:4px;">Registering as</div>
+          <div id="strip-name" style="font-weight:600; font-size:.9rem;"></div>
+          <div id="strip-email" style="font-size:.78rem; color:var(--t2);"></div>
+        </div>
+
         <form id="reg-form" novalidate>
           <input type="hidden" id="reg-event-id" />
-          <div class="form-grid">
+          <div class="form-grid" id="reg-form-fields">
             <div class="form-group full">
               <label for="reg-name">Full Name <span aria-hidden="true">*</span></label>
               <input type="text" id="reg-name" placeholder="e.g. Arjun Krishnan" autocomplete="name" required />

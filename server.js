@@ -44,10 +44,9 @@ app.use('/api/proposals',     require('./routes/proposals'));
 app.use('/api/events',        require('./routes/events'));
 app.use('/api/registrations', require('./routes/registrations'));
 
-// Catch-all: serve index.html for unknown GET routes (SPA fallback)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// Note: Named HTML pages (login.html, admin.html, profile.html) are served
+// directly by express.static above. No SPA catch-all needed.
+
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

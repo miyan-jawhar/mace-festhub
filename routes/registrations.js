@@ -14,7 +14,7 @@ const { optionalAuth, requireAuth, requireRole } = require('../middleware/auth')
 
 // IMPORTANT: /student/:email must come before /:eventId to prevent Express
 // matching the literal string "student" as a MongoDB ObjectId
-router.get( '/student/:email', requireAuth, getStudentRegistrations); // GET  /api/registrations/student/:email
+router.get( '/student/:email', optionalAuth, getStudentRegistrations); // GET  /api/registrations/student/:email
 
 router.post('/',                 optionalAuth, register);              // POST /api/registrations
 router.get( '/:eventId',         getRegistrations);                    // GET  /api/registrations/:eventId

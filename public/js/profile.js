@@ -364,10 +364,10 @@ async function loadPendingApprovals() {
 // ── Proposal Card Renderer ────────────────────────────────────────────────────
 function renderProposalCard(p, showActions) {
     const statusMap = {
-        pending_fa:        { cls:'status-limited', label:'Awaiting FA Review' },
-        pending_principal: { cls:'status-open',    label:'Awaiting Principal' },
-        approved:          { cls:'status-open',    label:'Approved ✓' },
-        rejected:          { cls:'status-past',    label:'Rejected' },
+        pending_fa:        { cls:'prop-status-fa',        label:'Awaiting FA Review' },
+        pending_principal: { cls:'prop-status-principal', label:'Awaiting Principal' },
+        approved:          { cls:'prop-status-approved',  label:'Approved ✓' },
+        rejected:          { cls:'prop-status-rejected',  label:'Rejected' },
     };
     const st = statusMap[p.status] || { cls:'', label: p.status };
     const dateStr = p.date ? formatDate(p.date) : '—';
@@ -376,7 +376,7 @@ function renderProposalCard(p, showActions) {
         ? `<button class="btn btn-primary btn-sm" onclick="openActionModal('${p._id}', 'approve')">Approve</button>`
         : '';
     const rejectBtn = showActions
-        ? `<button class="btn btn-outline btn-sm" style="color:var(--error); border-color:var(--error);" onclick="openActionModal('${p._id}', 'reject')">Reject</button>`
+        ? `<button class="btn btn-danger btn-sm" onclick="openActionModal('${p._id}', 'reject')">Reject</button>`
         : '';
 
     const comments = [];
@@ -396,11 +396,11 @@ function renderProposalCard(p, showActions) {
           </div>
           ${p.proposedBy ? `<div class="proposal-meta">Proposed by: ${p.proposedBy.name} (${p.proposedBy.email})</div>` : ''}
         </div>
-        <span class="card-status ${st.cls}">${st.label}</span>
+        <span class="pill ${st.cls}">${st.label}</span>
       </div>
-      ${p.description ? `<p style="color:var(--text-muted); margin:8px 0; font-size:.9em;">${p.description}</p>` : ''}
+      ${p.description ? `<p style="color:var(--t2); margin:8px 0; font-size:.85em;">${p.description}</p>` : ''}
       ${comments.join('')}
-      ${p.createdEventId ? `<div class="proposal-comment" style="color:var(--success);">✓ Event created on the events page</div>` : ''}
+      ${p.createdEventId ? `<div class="proposal-comment" style="color:var(--green);">✓ Event created on the events page</div>` : ''}
       ${showActions ? `<div class="proposal-actions">${approveBtn}${rejectBtn}</div>` : ''}
     </div>`;
 }
@@ -429,8 +429,7 @@ window.openActionModal = function(proposalId, action) {
         : 'This will permanently reject the proposal.';
     document.getElementById('action-confirm-btn').className =
         `btn ${isApprove ? 'btn-primary' : 'btn-danger'}`;
-    document.getElementById('action-confirm-btn').style.cssText =
-        isApprove ? '' : 'background:var(--error); color:#fff; border:none; padding:10px 24px; border-radius:var(--radius);';
+    document.getElementById('action-confirm-btn').style.cssText = '';
     actionCallback = () => submitAction(proposalId, action);
     actionModal.style.display = 'flex';
     actionCommentEl.focus();

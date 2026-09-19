@@ -47,10 +47,10 @@ function capacityClass(pct) {
 }
 
 function statusLabel(event) {
-    if (isPast(event.date))               return { cls:'status-past',    text:'Event Ended' };
-    if (event.confirmedCount >= event.capacity) return { cls:'status-full',    text:'Full — Waitlist Open' };
+    if (isPast(event.date))                        return { cls:'status-past',    text:'Event Ended' };
+    if (event.confirmedCount >= event.capacity)    return { cls:'status-full',    text:'Full — Waitlist Open' };
     const avail = event.capacity - event.confirmedCount;
-    if (avail <= 5)                        return { cls:'status-limited', text:`${avail} seats left` };
+    if (avail <= 5)                                return { cls:'status-limited', text:`${avail} seats left` };
     return { cls:'status-open', text:`${avail} seats available` };
 }
 
@@ -146,7 +146,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 });
 
 // ── Modal open ────────────────────────────────────────────────────────
-function openModal(eventId) {
+window.openModal = function openModal(eventId) {
     const ev = allEvents.find(e => e._id === eventId);
     if (!ev) return;
 
@@ -158,38 +158,60 @@ function openModal(eventId) {
         : `📅 ${formatDate(ev.date)}  ·  ${ev.capacity - ev.confirmedCount} seats available`;
     document.getElementById('reg-btn-text').textContent = isFull ? 'Join Waitlist' : 'Register Now';
 
-    // Auto-fill from logged-in user profile
     const user = getUser();
+    const formFields   = document.getElementById('reg-form-fields');
+    const loginPrompt  = document.getElementById('login-prompt');
+    const loggedInStrip = document.getElementById('logged-in-strip');
+
     if (user) {
-        const nameEl = document.getElementById('reg-name');
-        const emailEl = document.getElementById('reg-email');
-        const deptEl  = document.getElementById('reg-dept');
-        const yearEl  = document.getElementById('reg-year');
-        const phoneEl = document.getElementById('reg-phone');
-        if (nameEl)  { nameEl.value  = user.name        || ''; nameEl.disabled  = true; }
-        if (emailEl) { emailEl.value = user.email       || ''; emailEl.disabled = true; }
-        if (deptEl)  { deptEl.value  = user.department  || ''; }
-        if (yearEl && ['1','2','3','4'].includes(user.year))  yearEl.value = user.year;
-        if (phoneEl) { phoneEl.value = user.phone       || ''; }
+        // Logged-in: show strip, collapse non-essential fields, pre-fill
+        loginPrompt.style.display   = 'none';
+        loggedInStrip.style.display = 'block';
+        document.getElementById('strip-name').textContent  = user.name;
+        document.getElementById('strip-email').textContent = user.email;
+
+        // Pre-fill & lock name/email
+        document.getElementById('reg-name').value  = user.name  || '';
+        document.getElementById('reg-email').value = user.email || '';
+        document.getElementById('reg-name').disabled  = true;
+        document.getElementById('reg-email').disabled = true;
+
+        // Pre-fill optional fields
+        document.getElementById('reg-phone').value = user.phone      || '';
+        document.getElementById('reg-dept').value  = user.department || '';
+        if (['1','2','3','4'].includes(user.year)) {
+            document.getElementById('reg-year').value = user.year;
+        }
     } else {
-        // Clear any previous auto-fill and re-enable
+        // Guest: show login prompt, show full form
+        loginPrompt.style.display   = 'block';
+        loggedInStrip.style.display = 'none';
+
+        // Clear and re-enable all fields
         ['reg-name','reg-email','reg-phone','reg-dept'].forEach(id => {
             const el = document.getElementById(id);
             if (el) { el.value = ''; el.disabled = false; }
         });
-        document.getElementById('reg-year').value    = '';
+        document.getElementById('reg-year').value = '';
     }
 
-    // Reset form (non-disabled fields)
     clearErrors();
-    formView.style.display = 'block';
+    formView.style.display   = 'block';
     resultView.style.display = 'none';
-    modal.style.display = 'flex';
-    if (!getUser()) document.getElementById('reg-name').focus();
-}
+    modal.style.display      = 'flex';
+
+    // Focus first editable field
+    const firstInput = document.getElementById(user ? 'reg-phone' : 'reg-name');
+    if (firstInput && !firstInput.disabled) firstInput.focus();
+};
 
 function closeModal() {
     modal.style.display = 'none';
+    // Re-enable locked fields for next open
+    ['reg-name','reg-email'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = false;
+    });
     fetchEvents(); // Refresh seat counts
 }
 
@@ -214,7 +236,7 @@ function validateForm() {
     const phone = document.getElementById('reg-phone').value.trim();
     const year  = document.getElementById('reg-year').value;
 
-    if (!name) { document.getElementById('err-name').textContent = 'Name is required'; valid = false; }
+    if (!name)  { document.getElementById('err-name').textContent  = 'Name is required'; valid = false; }
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
         document.getElementById('err-email').textContent = 'Valid email is required'; valid = false;
     }
@@ -261,7 +283,7 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
         }
 
         // Show result view
-        formView.style.display = 'none';
+        formView.style.display   = 'none';
         resultView.style.display = 'block';
 
         if (data.status === 'confirmed') {
@@ -280,6 +302,12 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
             badge.className = 'result-badge result-waitlisted';
             badge.textContent = `Waitlist #${pos}`;
         }
+
+        // If logged in, hint them to their profile
+        const user = getUser();
+        if (user) {
+            showToast('View your registrations on your <a href="/profile.html" style="color:var(--primary-h);text-decoration:underline;">Profile page</a>', 'success');
+        }
     } catch (err) {
         showToast('Network error. Please try again.', 'error');
     } finally {
@@ -291,146 +319,3 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
 // ── Init ───────────────────────────────────────────────────────────────
 renderNavAuth();
 fetchEvents();
-
-// ═══════════════════════════════════════════════════════════════════════
-// MY REGISTRATIONS — Student self-cancel section
-// ═══════════════════════════════════════════════════════════════════════
-
-// ── Collapsible toggle ─────────────────────────────────────────────────
-const myRegsToggle  = document.getElementById('my-regs-toggle');
-const myRegsBody    = document.getElementById('my-regs-body');
-const myRegsChevron = document.getElementById('my-regs-chevron');
-
-myRegsToggle.addEventListener('click', toggleMyRegs);
-myRegsToggle.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMyRegs(); }
-});
-
-function toggleMyRegs() {
-    const open = myRegsBody.classList.toggle('open');
-    myRegsChevron.classList.toggle('open', open);
-    myRegsToggle.setAttribute('aria-expanded', open);
-    if (open) document.getElementById('lookup-email').focus();
-}
-
-// ── Email lookup ───────────────────────────────────────────────────────
-const lookupBtn   = document.getElementById('lookup-btn');
-const lookupInput = document.getElementById('lookup-email');
-const resultsDiv  = document.getElementById('my-regs-results');
-
-lookupBtn.addEventListener('click', doLookup);
-lookupInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLookup(); });
-
-async function doLookup() {
-    const email = lookupInput.value.trim();
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-        resultsDiv.innerHTML = `<p class="my-reg-empty" style="color:var(--error);">Please enter a valid email address.</p>`;
-        return;
-    }
-
-    lookupBtn.disabled = true;
-    lookupBtn.textContent = 'Looking up…';
-    resultsDiv.innerHTML = `<p class="my-reg-empty">Searching…</p>`;
-
-    try {
-        const res  = await fetch(`${API}/api/registrations/student/${encodeURIComponent(email)}`);
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error || 'Lookup failed');
-
-        if (!data.length) {
-            resultsDiv.innerHTML = `<p class="my-reg-empty">No active registrations found for <strong>${email}</strong>.</p>`;
-            return;
-        }
-
-        renderMyRegs(data);
-    } catch (err) {
-        resultsDiv.innerHTML = `<p class="my-reg-empty" style="color:var(--error);">${err.message}</p>`;
-    } finally {
-        lookupBtn.disabled = false;
-        lookupBtn.textContent = 'Look Up';
-    }
-}
-
-// ── Render results ─────────────────────────────────────────────────────
-function renderMyRegs(regs) {
-    resultsDiv.innerHTML = `<div class="my-regs-list">${regs.map(r => {
-        const ev      = r.eventId;   // populated object from server
-        const evName  = ev?.name  ?? 'Unknown Event';
-        const evDate  = ev?.date  ? formatDate(ev.date) : '—';
-        const evVenue = ev?.venue ?? '—';
-        const evCat   = ev?.category ?? '';
-
-        const statusBadge = r.status === 'confirmed'
-            ? `<span class="status-badge badge-confirmed">✓ Confirmed</span>`
-            : `<span class="status-badge badge-waitlisted">⏳ Waitlist #${r.waitlistPosition}</span>`;
-
-        return `
-        <div class="my-reg-item" id="reg-item-${r._id}">
-          <div class="my-reg-event">
-            <div class="my-reg-event-name">${evName}</div>
-            <div class="my-reg-event-meta">
-              ${evCat ? `<span class="card-cat cat-${evCat}" style="font-size:.65rem; padding:2px 8px;">${evCat}</span>` : ''}
-              <span>📅 ${evDate}</span>
-              <span>📍 ${evVenue}</span>
-            </div>
-          </div>
-          <div class="my-reg-actions">
-            ${statusBadge}
-            <button class="btn btn-danger btn-sm"
-                    id="self-cancel-${r._id}"
-                    onclick="selfCancel('${r._id}', '${evName.replace(/'/g, "\\'")}')">
-              Cancel
-            </button>
-          </div>
-        </div>`;
-    }).join('')}</div>`;
-}
-
-// ── Self-cancel ────────────────────────────────────────────────────────
-async function selfCancel(regId, eventName) {
-    if (!confirm(`Cancel your registration for "${eventName}"?\n\nIf you're confirmed, the next waitlisted student will be promoted automatically.`)) return;
-
-    const btn = document.getElementById(`self-cancel-${regId}`);
-    if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
-
-    try {
-        const res  = await fetch(`${API}/api/registrations/${regId}/cancel`, { method: 'PUT' });
-        const data = await res.json();
-
-        if (!res.ok) {
-            showToast(data.error || 'Cancel failed', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = 'Cancel'; }
-            return;
-        }
-
-        // Remove the item from the list with a fade
-        const item = document.getElementById(`reg-item-${regId}`);
-        if (item) {
-            item.style.opacity = '0';
-            item.style.transform = 'translateX(20px)';
-            item.style.transition = 'opacity .3s ease, transform .3s ease';
-            setTimeout(() => item.remove(), 300);
-        }
-
-        const msg = data.promoted
-            ? `Registration cancelled. ${data.promoted.name} was promoted from the waitlist! 🎉`
-            : 'Your registration has been cancelled.';
-        showToast(msg, data.promoted ? 'success' : 'warning');
-
-        // Refresh event cards so seat counts update
-        fetchEvents();
-
-        // If results list is now empty, show empty state
-        setTimeout(() => {
-            const list = resultsDiv.querySelector('.my-regs-list');
-            if (list && !list.children.length) {
-                resultsDiv.innerHTML = `<p class="my-reg-empty">No more active registrations for this email.</p>`;
-            }
-        }, 400);
-    } catch (err) {
-        showToast('Network error. Please try again.', 'error');
-        if (btn) { btn.disabled = false; btn.textContent = 'Cancel'; }
-    }
-}
-

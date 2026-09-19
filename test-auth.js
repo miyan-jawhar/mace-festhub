@@ -54,8 +54,10 @@ const puppeteer = require('puppeteer-core');
         console.log('Profile page sidebar loaded successfully.');
         
         console.log('Logging out...');
-        await page.click('.nav-logout-btn');
-        await page.waitForSelector('a[href="/login.html"]');
+        await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle0' }),
+            page.click('.nav-logout-btn')
+        ]);
         console.log('Successfully logged out.');
         
         console.log('Test completed successfully! ✅');
