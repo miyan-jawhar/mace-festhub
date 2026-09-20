@@ -17,7 +17,7 @@ const { optionalAuth, requireAuth, requireRole } = require('../middleware/auth')
 router.get( '/student/:email', optionalAuth, getStudentRegistrations); // GET  /api/registrations/student/:email
 
 router.post('/',                 optionalAuth, register);              // POST /api/registrations
-router.get( '/:eventId',         getRegistrations);                    // GET  /api/registrations/:eventId
+router.get( '/:eventId',         requireAuth, requireRole('admin'), getRegistrations);  // GET  /api/registrations/:eventId (admin)
 router.put( '/:id/cancel',       optionalAuth, cancel);                // PUT  /api/registrations/:id/cancel
 router.delete('/email/:email',   requireAuth, cancelByEmail);          // DELETE /api/registrations/email/:email
 router.delete('/:id',            requireAuth, requireRole('admin'), deleteRegistration); // DELETE /api/registrations/:id
