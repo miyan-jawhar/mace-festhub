@@ -9,11 +9,10 @@ if (getToken()) { window.location.replace('/'); }
 renderNavAuth();
 
 // ─── Email Pattern Detection ──────────────────────────────────────────────────
-//  Student roll: starts with B + 2 digits before @mace.ac.in
-//    e.g. B24CS3L08@mace.ac.in, b22me001@mace.ac.in
-//  Faculty: any other @mace.ac.in pattern
-//    e.g. john.doe@mace.ac.in, hod.cse@mace.ac.in
-const STUDENT_ROLL_RE = /^[bB]\d{2}[a-zA-Z0-9._]+$/;
+//  Student roll number format: b + YY (join year) + dept code (2-4 letters) + roll (3+ digits)
+//  Examples: b24co013, b24co018, b24cs001, b23ec052, B24CS3L08
+//  Faculty: any other @mace.ac.in  e.g. john.doe@mace.ac.in, hod.cse@mace.ac.in
+const STUDENT_ROLL_RE = /^[bB]\d{2}[a-zA-Z]{2,4}\d/;   // b + 2-digit year + 2-4 letters + digit
 
 function detectEmailType(email) {
     const lower = email.toLowerCase().trim();

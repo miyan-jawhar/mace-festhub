@@ -14,6 +14,12 @@ const eventSchema = new mongoose.Schema({
         trim: true,
         default: '',
     },
+    // Optional external URL for the official event page / RSVP link
+    eventUrl: {
+        type: String,
+        trim: true,
+        default: '',
+    },
     date: {
         type: Date,
         required: [true, 'Event date is required'],

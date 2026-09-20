@@ -171,6 +171,7 @@ function startEditEvent(id) {
     document.getElementById('ev-venue').value        = ev.venue || '';
     document.getElementById('ev-category').value     = ev.category;
     document.getElementById('ev-capacity').value     = ev.capacity;
+    document.getElementById('ev-url').value          = ev.eventUrl || '';
     switchPanel('add-event');
 }
 
@@ -209,6 +210,7 @@ document.getElementById('add-event-form').addEventListener('submit', async (e) =
         venue:       document.getElementById('ev-venue').value.trim(),
         category:    document.getElementById('ev-category').value,
         capacity:    parseInt(document.getElementById('ev-capacity').value),
+        eventUrl:    document.getElementById('ev-url').value.trim(),
     };
 
     const btn = document.getElementById('save-event-btn');

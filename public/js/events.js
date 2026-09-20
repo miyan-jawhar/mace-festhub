@@ -82,6 +82,7 @@ function renderCards(events) {
           <div class="card-meta">
             <div class="card-meta-item"><span class="icon">📅</span>${formatDate(ev.date)}</div>
             <div class="card-meta-item"><span class="icon">📍</span>${ev.venue || 'TBD'}</div>
+            ${ev.eventUrl ? `<div class="card-meta-item"><span class="icon">🔗</span><a href="${ev.eventUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--primary-h);text-decoration:none;font-weight:500;">Learn More →</a></div>` : ''}
           </div>
           <div class="capacity-wrap">
             <div class="capacity-label">
