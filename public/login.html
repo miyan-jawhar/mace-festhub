@@ -3,11 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Sign in or create your MACE FestHub student account to register for campus events." />
+  <meta name="description" content="Sign in or create your MACE FestHub account to register for campus events." />
   <title>Login — MACE FestHub</title>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body class="auth-page">
+
+  <!-- Animated background orbs -->
+  <div class="auth-orb auth-orb-1" aria-hidden="true"></div>
+  <div class="auth-orb auth-orb-2" aria-hidden="true"></div>
+  <div class="auth-orb auth-orb-3" aria-hidden="true"></div>
 
   <!-- ── Navbar ─────────────────────────────────────────────── -->
   <nav class="navbar" role="navigation" aria-label="Main navigation">
@@ -35,8 +40,10 @@
 
       <!-- Tab switcher -->
       <div class="auth-tabs" role="tablist">
-        <button class="auth-tab active" id="tab-login"    role="tab" aria-selected="true"  aria-controls="panel-login">Sign In</button>
-        <button class="auth-tab"        id="tab-register" role="tab" aria-selected="false" aria-controls="panel-register">Register</button>
+        <button class="auth-tab active" id="tab-login"    role="tab"
+                aria-selected="true"  aria-controls="panel-login">Sign In</button>
+        <button class="auth-tab"        id="tab-register" role="tab"
+                aria-selected="false" aria-controls="panel-register">Register</button>
       </div>
 
       <!-- ── Sign-In Panel ──────────────────────────────────── -->
@@ -44,14 +51,17 @@
         <form id="login-form" novalidate>
           <div class="form-group">
             <label for="login-email">Email</label>
-            <input type="email" id="login-email" placeholder="you@mace.ac.in" autocomplete="email" required />
+            <input type="email" id="login-email"
+                   placeholder="you@mace.ac.in" autocomplete="email" required />
             <span class="field-error" id="err-login-email" role="alert"></span>
           </div>
           <div class="form-group">
             <label for="login-password">Password</label>
             <div class="password-wrap">
-              <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password" required />
-              <button type="button" class="password-toggle" id="toggle-login-pw" aria-label="Toggle password visibility">👁</button>
+              <input type="password" id="login-password"
+                     placeholder="Enter password" autocomplete="current-password" required />
+              <button type="button" class="password-toggle"
+                      id="toggle-login-pw" aria-label="Toggle password visibility">👁</button>
             </div>
             <span class="field-error" id="err-login-pw" role="alert"></span>
           </div>
@@ -61,45 +71,51 @@
           </button>
         </form>
 
-        <!-- Hint for principal / FA -->
-        <p style="margin-top:18px; font-size:.75rem; color:var(--t3); text-align:center;">
-          Faculty Advisors and the Principal sign in here using their assigned credentials.
+        <p class="auth-hint">
+          Faculty Advisors and the Principal log in here using their assigned credentials.
         </p>
       </div>
 
       <!-- ── Register Panel ─────────────────────────────────── -->
-      <!-- NOTE: Registration creates student accounts only.
-           FA and Principal roles are assigned by the Principal
-           through the Profile → Manage Users panel. -->
       <div id="panel-register" role="tabpanel" aria-labelledby="tab-register" style="display:none;">
-        <div style="margin-bottom:16px; padding:10px 14px; background:var(--primary-dim); border:1px solid var(--primary-lt); border-radius:var(--r); font-size:.78rem; color:var(--t2);">
-          ℹ️ This form creates a <strong style="color:var(--t1);">student</strong> account. Faculty Advisors and the Principal log in using credentials assigned by the institution.
-        </div>
         <form id="register-form" novalidate>
           <div class="form-grid">
             <div class="form-group full">
               <label for="reg-name">Full Name *</label>
-              <input type="text" id="reg-name" placeholder="e.g. Arjun Krishnan" autocomplete="name" required />
+              <input type="text" id="reg-name"
+                     placeholder="e.g. Arjun Krishnan" autocomplete="name" required />
               <span class="field-error" id="err-reg-name" role="alert"></span>
             </div>
             <div class="form-group full">
-              <label for="reg-email">Email *</label>
-              <input type="email" id="reg-email" placeholder="name@mace.ac.in" autocomplete="email" required />
+              <label for="reg-email">
+                Institutional Email *
+                <span class="label-hint">(use @mace.ac.in)</span>
+              </label>
+              <input type="email" id="reg-email"
+                     placeholder="name@mace.ac.in" autocomplete="email" required />
               <span class="field-error" id="err-reg-email" role="alert"></span>
+              <!-- Email pattern indicator chip -->
+              <span class="email-type-chip" id="email-type-chip" aria-live="polite"></span>
             </div>
             <div class="form-group full">
-              <label for="reg-password">Password * <span class="label-hint">(min 6 characters)</span></label>
+              <label for="reg-password">
+                Password * <span class="label-hint">(min 6 characters)</span>
+              </label>
               <div class="password-wrap">
-                <input type="password" id="reg-password" placeholder="Create a password" autocomplete="new-password" required />
-                <button type="button" class="password-toggle" id="toggle-reg-pw" aria-label="Toggle password visibility">👁</button>
+                <input type="password" id="reg-password"
+                       placeholder="Create a password" autocomplete="new-password" required />
+                <button type="button" class="password-toggle"
+                        id="toggle-reg-pw" aria-label="Toggle password visibility">👁</button>
               </div>
               <span class="field-error" id="err-reg-pw" role="alert"></span>
             </div>
-            <div class="form-group">
+
+            <!-- Student-only fields (hidden for detected faculty emails) -->
+            <div class="form-group" id="reg-dept-group">
               <label for="reg-dept">Department</label>
               <input type="text" id="reg-dept" placeholder="e.g. CSE (DS)" />
             </div>
-            <div class="form-group">
+            <div class="form-group" id="reg-year-group">
               <label for="reg-year">Year of Study</label>
               <select id="reg-year">
                 <option value="N/A">— Select —</option>
@@ -109,19 +125,76 @@
                 <option value="4">4th Year</option>
               </select>
             </div>
+
             <div class="form-group full">
               <label for="reg-phone">Phone</label>
-              <input type="tel" id="reg-phone" placeholder="+91 XXXXX XXXXX" autocomplete="tel" />
+              <input type="tel" id="reg-phone"
+                     placeholder="+91 XXXXX XXXXX" autocomplete="tel" />
             </div>
           </div>
+
+          <!-- Faculty notice (shown when faculty email detected) -->
+          <div id="faculty-reg-notice" style="display:none;"
+               class="fa-step-header" style="margin:14px 0;">
+            <span class="fa-step-icon">🎓</span>
+            <div>
+              <div class="fa-step-title">Faculty / Staff Account</div>
+              <div class="fa-step-desc">
+                You're registering with a faculty email. Your account will be created — to
+                become a Faculty Advisor for a club, log in afterwards and use your profile
+                to send a request to the Principal.
+              </div>
+            </div>
+          </div>
+
           <div class="auth-error-box" id="register-error" style="display:none;"></div>
           <button type="submit" class="btn btn-primary auth-submit-btn" id="register-submit-btn">
-            <span id="register-btn-text">Create Student Account</span>
+            <span id="register-btn-text">Create Account</span>
           </button>
         </form>
       </div>
 
-    </div>
+      <!-- ── FA Request Step (post-login for detected faculty) ─────── -->
+      <div id="panel-fa-request" style="display:none;" class="fa-step">
+        <div class="fa-step-header">
+          <span class="fa-step-icon">🎓</span>
+          <div>
+            <div class="fa-step-title">Are you a Faculty Advisor?</div>
+            <div class="fa-step-desc">
+              Your email looks like a faculty account. If you guide a club as Faculty Advisor,
+              you can request access — the Principal will review and approve it.
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label for="fa-club-select">Select the club you advise *</label>
+          <select id="fa-club-select">
+            <option value="">— Choose a club —</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label for="fa-note">Message to Principal <span class="label-hint">(optional)</span></label>
+          <textarea id="fa-note" rows="2"
+                    placeholder="Briefly introduce yourself and your role with the club…"></textarea>
+        </div>
+        <div class="auth-error-box" id="fa-request-error" style="display:none;"></div>
+        <div class="form-actions" style="margin-top:6px;">
+          <button type="button" class="btn btn-secondary" id="fa-skip-btn">
+            Skip for now
+          </button>
+          <button type="button" class="btn btn-primary" id="fa-submit-btn"
+                  style="width:auto; flex:2;">
+            <span id="fa-btn-text">Send Request</span>
+          </button>
+        </div>
+        <p class="auth-hint" style="margin-top:14px;">
+          Your request goes to the Principal's inbox. You'll have normal student access
+          until it's approved.
+        </p>
+      </div>
+
+    </div><!-- /auth-card -->
   </main>
 
   <!-- ── Toast Container ─────────────────────────────────────── -->

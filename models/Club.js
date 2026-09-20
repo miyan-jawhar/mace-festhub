@@ -27,6 +27,7 @@ const clubSchema = new mongoose.Schema({
 
 // Virtual: get only president + secretary for proposal eligibility checks
 clubSchema.virtual('officers').get(function () {
+    if (!this.members) return [];
     return this.members.filter(m => ['president', 'secretary'].includes(m.clubRole));
 });
 

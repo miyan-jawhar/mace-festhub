@@ -48,6 +48,7 @@ function switchPanel(panelId) {
     if (panelId === 'my-proposals')      loadMyProposals();
     if (panelId === 'pending-approvals') loadPendingApprovals();
     if (panelId === 'manage-users')      loadUserManagement();
+    if (panelId === 'inbox')             loadInbox();
 }
 
 // ── Show/hide sidebar sections based on user role ────────────────────────────────
@@ -487,19 +488,33 @@ async function init() {
     await checkOfficerStatus();
     loadMyRegistrations();
 
-    // Load pending count for badge
+    // Pending proposal approvals badge (FA / Principal / Admin)
     if (['faculty_advisor', 'principal', 'admin'].includes(currentUser.role)) {
         fetch(`${API}/api/proposals/pending`, { headers: authHeaders() })
             .then(r => r.json())
             .then(data => {
                 if (Array.isArray(data) && data.length) {
                     const badge = document.getElementById('pending-badge');
-                    badge.textContent    = data.length;
-                    badge.style.display  = 'inline-block';
+                    badge.textContent   = data.length;
+                    badge.style.display = 'inline-block';
+                }
+            }).catch(() => {});
+    }
+
+    // FA Requests inbox badge (Principal + Admin only)
+    if (['principal', 'admin'].includes(currentUser.role)) {
+        fetch(`${API}/api/fa-requests/count`, { headers: authHeaders() })
+            .then(r => r.json())
+            .then(data => {
+                if (data.count > 0) {
+                    const badge = document.getElementById('inbox-badge');
+                    badge.textContent   = data.count;
+                    badge.style.display = 'inline-block';
                 }
             }).catch(() => {});
     }
 }
+
 
 init();
 
@@ -707,7 +722,6 @@ window.assignFA = async function(clubId, clubName) {
     } catch { showToast('Network error', 'error'); }
 };
 
-// ── Search/filter wiring for user table ───────────────────────────────────────
 document.getElementById('user-search-btn')?.addEventListener('click', () => {
     const search = document.getElementById('user-search').value.trim();
     const role   = document.getElementById('user-role-filter').value;
@@ -717,4 +731,152 @@ document.getElementById('user-search')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('user-search-btn').click();
 });
 document.getElementById('reload-clubs-btn')?.addEventListener('click', fetchAllClubs);
+
+// ── Inbox — FA Requests (Principal + Admin) ────────────────────────────────────
+
+const STATUS_CHIP = {
+    pending:  `<span class="pill prop-status-fa">⏳ Pending</span>`,
+    approved: `<span class="pill prop-status-approved">✅ Approved</span>`,
+    rejected: `<span class="pill prop-status-rejected">❌ Rejected</span>`,
+};
+
+async function loadInbox() {
+    const loadEl  = document.getElementById('inbox-loading');
+    const emptyEl = document.getElementById('inbox-empty');
+    const listEl  = document.getElementById('inbox-list');
+
+    loadEl.style.display  = 'block';
+    emptyEl.style.display = 'none';
+    listEl.style.display  = 'none';
+    listEl.innerHTML      = '';
+
+    const status = document.getElementById('inbox-filter')?.value || 'pending';
+
+    try {
+        const res  = await fetch(`${API}/api/fa-requests?status=${status}`, { headers: authHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        loadEl.style.display = 'none';
+        if (!data.length) { emptyEl.style.display = 'block'; return; }
+
+        listEl.style.display = 'block';
+        listEl.innerHTML = data.map(r => {
+            const person  = r.requestedBy?.name  || 'Unknown';
+            const email   = r.requestedBy?.email || '—';
+            const club    = r.club?.name          || 'Unknown Club';
+            const date    = new Date(r.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+            const chip    = STATUS_CHIP[r.status] || '';
+            const noteHtml = r.note
+                ? `<div class="fa-request-note">"${r.note}"</div>`
+                : '';
+            const reviewHtml = r.reviewNote
+                ? `<div class="proposal-comment" style="margin-top:8px;">
+                     <strong>Principal's note:</strong> ${r.reviewNote}
+                   </div>`
+                : '';
+            const actions = r.status === 'pending'
+                ? `<button class="btn btn-outline btn-sm" style="color:var(--green);border-color:rgba(34,197,94,.3);"
+                           onclick="inboxAction('${r._id}', 'approve')">✅ Approve</button>
+                   <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,.3);"
+                           onclick="inboxAction('${r._id}', 'reject')">✕ Reject</button>`
+                : `<span style="color:var(--t3); font-size:.78rem;">
+                     Reviewed on ${new Date(r.reviewedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short' })}
+                   </span>`;
+
+            return `
+            <div class="fa-request-card" id="fa-req-${r._id}">
+              <div class="fa-request-card-header">
+                <div>
+                  <div class="fa-request-person">🎓 ${person}</div>
+                  <div class="fa-request-meta">
+                    ${email} &nbsp;·&nbsp;
+                    Requesting FA for <strong style="color:var(--t1);">${club}</strong>
+                    &nbsp;·&nbsp; ${date}
+                  </div>
+                </div>
+                ${chip}
+              </div>
+              ${noteHtml}
+              ${reviewHtml}
+              <div class="fa-request-actions">${actions}</div>
+            </div>`;
+        }).join('');
+
+        // Update inbox badge to current count
+        if (status === 'pending') {
+            const badge = document.getElementById('inbox-badge');
+            if (badge) {
+                badge.textContent   = data.length || '';
+                badge.style.display = data.length ? 'inline-block' : 'none';
+            }
+        }
+    } catch (err) {
+        loadEl.style.display = 'none';
+        listEl.style.display = 'block';
+        listEl.innerHTML = `<p style="color:var(--red); padding:20px;">Error: ${err.message}</p>`;
+    }
+}
+
+// Modal-based approve / reject with optional review note
+window.inboxAction = function(requestId, action) {
+    const isApprove = action === 'approve';
+
+    // Re-use action modal
+    const modal    = document.getElementById('action-modal');
+    const title    = document.getElementById('action-modal-title');
+    const subtitle = document.getElementById('action-modal-subtitle');
+    const comment  = document.getElementById('action-comment');
+    const confirmBtn = document.getElementById('action-confirm-btn');
+
+    title.textContent    = isApprove ? 'Approve FA Request' : 'Reject FA Request';
+    subtitle.textContent = isApprove
+        ? 'The user will be granted Faculty Advisor role and assigned to the club.'
+        : 'The request will be rejected. You can add an optional note.';
+    confirmBtn.textContent = isApprove ? '✅ Approve' : '✕ Reject';
+    confirmBtn.style.background = isApprove ? 'var(--green)' : 'var(--red)';
+    comment.value = '';
+
+    modal.style.display = 'flex';
+
+    // One-shot confirm handler
+    const handler = async () => {
+        const reviewNote = comment.value.trim();
+        try {
+            const res  = await fetch(`${API}/api/fa-requests/${requestId}/${action}`, {
+                method: 'PUT', headers: authHeaders(),
+                body: JSON.stringify({ reviewNote }),
+            });
+            const data = await res.json();
+            modal.style.display = 'none';
+            confirmBtn.removeEventListener('click', handler);
+
+            if (!res.ok) { showToast(data.error || 'Action failed', 'error'); return; }
+            showToast(
+                isApprove ? 'FA request approved — role granted ✓' : 'FA request rejected',
+                isApprove ? 'success' : 'warning'
+            );
+            loadInbox();  // Refresh list
+
+            // Update inbox badge
+            if (isApprove) {
+                fetch(`${API}/api/fa-requests/count`, { headers: authHeaders() })
+                    .then(r => r.json())
+                    .then(d => {
+                        const badge = document.getElementById('inbox-badge');
+                        if (badge) {
+                            badge.textContent   = d.count || '';
+                            badge.style.display = d.count > 0 ? 'inline-block' : 'none';
+                        }
+                    }).catch(() => {});
+            }
+        } catch { showToast('Network error', 'error'); }
+    };
+    confirmBtn.addEventListener('click', handler, { once: true });
+};
+
+// Filter change reloads inbox
+document.getElementById('inbox-filter')?.addEventListener('change', loadInbox);
+document.getElementById('inbox-refresh-btn')?.addEventListener('click', loadInbox);
+
 
