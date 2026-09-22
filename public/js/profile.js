@@ -9,6 +9,22 @@ renderNavAuth();
 
 const API  = '';
 let currentUser = getUser();
+
+if (!currentUser && getToken()) {
+    try {
+        const res = await fetch('/api/auth/me', { headers: authHeaders() });
+        if (res.ok) {
+            currentUser = await res.json();
+            setUser(currentUser);
+            renderNavAuth();
+        } else {
+            logout();
+        }
+    } catch {
+        logout();
+    }
+}
+
 let myClubs     = [];
 let actionCallback = null;
 

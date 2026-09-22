@@ -7,6 +7,8 @@ const cors     = require('cors');
 const dotenv   = require('dotenv');
 const path     = require('path');
 const dns      = require('dns');
+const session  = require('express-session');
+const passport = require('passport');
 
 // Set public DNS servers to resolve MongoDB Atlas SRV records reliably
 try {
@@ -33,6 +35,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Express session is required by passport for the OAuth flow (state parameter verification)
+app.use(session({
+    secret: process.env.JWT_SECRET || 'fallback_session_secret',
+    resave: false,
+    saveUninitialized: false
+}));
+
+// Initialize passport
+require('./utils/passportSetup');
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Serve static frontend files (HTML/CSS/JS)
 app.use(express.static(path.join(__dirname, 'public')));

@@ -12,15 +12,15 @@ const PRIVILEGED_ROLES = ['faculty_advisor', 'principal', 'admin'];
 // Email of the hardcoded principal (cannot be demoted via API)
 const PRINCIPAL_EMAIL = (process.env.PRINCIPAL_EMAIL || 'principal@mace.ac.in').toLowerCase();
 
-function signToken(user) {
+exports.signToken = function(user) {
     return jwt.sign(
         { id: user._id, role: user.role },
         SECRET,
         { expiresIn: EXPIRES }
     );
-}
+};
 
-function publicUser(user) {
+exports.publicUser = function(user) {
     return {
         id:         user._id,
         name:       user.name,
@@ -30,7 +30,7 @@ function publicUser(user) {
         year:       user.year,
         phone:      user.phone,
     };
-}
+};
 
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
 exports.register = async (req, res) => {
@@ -51,8 +51,8 @@ exports.register = async (req, res) => {
         });
         await user.save();
 
-        const token = signToken(user);
-        res.status(201).json({ token, user: publicUser(user) });
+        const token = exports.signToken(user);
+        res.status(201).json({ token, user: exports.publicUser(user) });
     } catch (err) {
         if (err.code === 11000) {
             return res.status(400).json({ error: 'An account with this email already exists' });
@@ -75,8 +75,8 @@ exports.login = async (req, res) => {
         const match = await user.comparePassword(password);
         if (!match) return res.status(401).json({ error: 'Invalid email or password' });
 
-        const token = signToken(user);
-        res.json({ token, user: publicUser(user) });
+        const token = exports.signToken(user);
+        res.json({ token, user: exports.publicUser(user) });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

@@ -19,9 +19,19 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'Password is required'],
+        // Password is not required for users who sign up via Google Auth
+        required: false,
         minlength: [6, 'Password must be at least 6 characters'],
         select: false, // Never returned in queries by default
+    },
+    googleId: {
+        type: String,
+        default: null,
+    },
+    googleRefreshToken: {
+        type: String,
+        default: null,
+        select: false, // Keep sensitive token hidden by default
     },
     // System-level role — controls page access
     role: {

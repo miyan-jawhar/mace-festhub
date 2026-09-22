@@ -8,6 +8,15 @@ export function getToken()       { return localStorage.getItem(AUTH_KEY); }
 export function setToken(t)      { localStorage.setItem(AUTH_KEY, t); }
 export function clearToken()     { localStorage.removeItem(AUTH_KEY); localStorage.removeItem(USER_KEY); }
 
+// ─── Handle OAuth Token from URL ──────────────────────────────────────────────
+if (window.location.hash.startsWith('#token=')) {
+    const token = window.location.hash.substring(7);
+    setToken(token);
+    window.location.hash = ''; // Clear hash from URL
+    // We clear USER_KEY so it will be fetched dynamically below or on profile load
+    localStorage.removeItem(USER_KEY); 
+}
+
 // ─── User cache (stored as JSON alongside token) ──────────────────────────────
 export function getUser() {
     try { return JSON.parse(localStorage.getItem(USER_KEY)); } catch { return null; }

@@ -667,8 +667,40 @@ tr:hover td { background: rgba(255,255,255,.012); }
 input.email-student { border-color: rgba(59,130,246,.4) !important; }
 input.email-faculty { border-color: rgba(34,197,94,.4) !important; }
 
+/* ── Google Auth Button ────────────────────────────────────────────── */
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  background: white;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  border-radius: var(--r);
+  padding: 12px;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .2s, box-shadow .2s;
+}
+.btn-google:hover { background: #f8f9fa; box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15); }
+.google-icon { width: 20px; height: 20px; }
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--t3);
+  margin: 24px 0;
+  font-size: .85rem;
+}
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
+.auth-divider span { padding: 0 14px; }
+
 /* ── Profile role badge ──────────────────────────────────────────────── */
 #profile-role-badge { margin-bottom: 18px; }
+
 
 /* ── Ticket section on registration cards ───────────────────────────── */
 .ticket-section {

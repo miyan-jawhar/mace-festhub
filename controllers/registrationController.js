@@ -3,6 +3,7 @@
 const Registration  = require('../models/Registration');
 const Event         = require('../models/Event');
 const emailService  = require('../utils/emailService');
+const calendarService = require('../utils/calendarService');
 const { generateTicketToken } = require('../utils/ticketService');
 
 // ─── POST /api/registrations — Register a student ────────────────────────────
@@ -87,6 +88,11 @@ exports.register = async (req, res) => {
             ticketToken:    registration.ticketToken,
             registrationId: registration._id.toString(),
         }).catch(() => {}); // silent — email never breaks the flow
+
+        // ── Sync to Google Calendar in background ──────────────
+        if (userId) {
+            calendarService.addEventToCalendar(userId, event, registration).catch(() => {});
+        }
 
     } catch (err) {
         if (err.code === 11000) {
