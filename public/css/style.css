@@ -670,6 +670,93 @@ input.email-faculty { border-color: rgba(34,197,94,.4) !important; }
 /* ── Profile role badge ──────────────────────────────────────────────── */
 #profile-role-badge { margin-bottom: 18px; }
 
+/* ── Ticket section on registration cards ───────────────────────────── */
+.ticket-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0 4px;
+  border-top: 1px solid rgba(255,255,255,.06);
+  margin-top: 12px;
+}
+.qr-expand {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  animation: fadeIn .25s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+.ticket-qr {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  border: 2px solid rgba(124,58,237,.35);
+  background: #0f0f14;
+  display: block;
+}
+.ticket-id-display {}
+.ticket-id-label {
+  font-size: .65rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--t3);
+  margin-bottom: 4px;
+}
+.ticket-id-value {
+  font-family: 'Courier New', monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--primary-h);
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--t2);
+  padding: 6px 14px;
+  border-radius: var(--r);
+  font-size: .8rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color .2s, color .2s;
+}
+.btn-ghost:hover { border-color: var(--primary-h); color: var(--primary-h); }
+.label-hint { color: var(--t3); font-size: .8em; font-weight: 400; margin-left: 4px; }
+
+/* ── FA Request cards (inbox) ───────────────────────────────────────── */
+.fa-request-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  transition: border-color .2s;
+}
+.fa-request-card:hover { border-color: rgba(124,58,237,.4); }
+.fa-request-card-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.fa-request-person { font-weight: 600; color: var(--t1); margin-bottom: 4px; }
+.fa-request-meta   { font-size: .8rem; color: var(--t2); }
+.fa-request-note   { font-style: italic; color: var(--t2); font-size: .85rem; margin-top:10px; padding: 8px 12px; background: rgba(255,255,255,.03); border-left: 2px solid var(--border); border-radius: 0 4px 4px 0; }
+.fa-request-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.badge-count {
+  background: var(--primary-h);
+  color: #fff;
+  border-radius: 999px;
+  font-size: .65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  min-width: 18px;
+  text-align: center;
+  margin-left: auto;
+}
+
 /* ── Responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .hero { padding: 56px 16px 40px; }

@@ -23,6 +23,7 @@ const bcrypt   = require('bcryptjs');
 const User         = require('./models/User');
 const Event        = require('./models/Event');
 const Registration = require('./models/Registration');
+const { generateTicketToken } = require('./utils/ticketService');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mace_festhub';
 
@@ -181,6 +182,7 @@ async function seed() {
             eventId: e_full._id, name: r.name, email: r.email,
             year: r.year, department: r.dept, status: 'confirmed',
             userId: r.uid, registeredAt: new Date(Date.now() - 86400000),
+            ticketToken: generateTicketToken(),
         })),
         // Waitlisted in full event
         ...waitlistedEmails.map(r => ({
@@ -193,13 +195,13 @@ async function seed() {
         {
             eventId: e_open._id, name: 'Arjun Krishnan', email: 'b24co013@mace.ac.in',
             year: '1', department: 'CSE (DS)', status: 'confirmed',
-            userId: s1._id, registeredAt: new Date(),
+            userId: s1._id, registeredAt: new Date(), ticketToken: generateTicketToken(),
         },
         // Rahul in the sports event
         {
             eventId: e_sports._id, name: 'Rahul Menon', email: 'b24co052@mace.ac.in',
             year: '1', department: 'CSE (DS)', status: 'confirmed',
-            userId: s3._id, registeredAt: new Date(),
+            userId: s3._id, registeredAt: new Date(), ticketToken: generateTicketToken(),
         },
     ]);
 

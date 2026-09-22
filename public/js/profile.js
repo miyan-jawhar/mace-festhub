@@ -107,8 +107,37 @@ async function loadMyRegistrations() {
         listEl.innerHTML = regs.map(r => {
             const ev      = r.eventId;
             const status  = r.status;
-            const badgeCls = status === 'confirmed' ? 'result-confirmed' : 'result-waitlisted';
-            const badgeTxt = status === 'confirmed' ? '✓ Confirmed' : `⏳ Waitlist #${r.waitlistPosition}`;
+            const isConf  = status === 'confirmed';
+            const badgeCls = isConf ? 'result-confirmed' : 'result-waitlisted';
+            const badgeTxt = isConf ? '✓ Confirmed' : `⏳ Waitlist #${r.waitlistPosition}`;
+
+            const ticketSection = (isConf && r.ticketToken) ? `
+              <div class="ticket-section" id="ticket-${r._id}">
+                <button class="btn btn-ghost btn-sm ticket-toggle"
+                  onclick="toggleQR('${r._id}')" id="qr-toggle-${r._id}">
+                  <span>🎫</span> Show QR Code
+                </button>
+                <div class="qr-expand" id="qr-expand-${r._id}" style="display:none;">
+                  <img src="/api/tickets/${r._id}/qr.png"
+                       alt="Entry QR Code"
+                       class="ticket-qr"
+                       loading="lazy"
+                       onerror="this.style.display='none'" />
+                  <div class="ticket-id-display">
+                    <div class="ticket-id-label">Ticket ID</div>
+                    <div class="ticket-id-value">${r.ticketToken}</div>
+                  </div>
+                </div>
+                <a href="/api/tickets/${r._id}/pdf"
+                   target="_blank"
+                   class="btn btn-outline btn-sm"
+                   style="color:var(--primary-h); border-color:rgba(124,58,237,.35);">
+                  ⬇ Download E-Ticket PDF
+                </a>
+              </div>` : (status === 'waitlisted'
+                ? `<div class="ticket-section"><span style="font-size:.78rem; color:var(--t3);">Ticket issued when you're promoted from waitlist</span></div>`
+                : '');
+
             return `
             <div class="reg-card" id="reg-card-${r._id}">
               <div class="reg-card-info">
@@ -122,9 +151,10 @@ async function loadMyRegistrations() {
                 </div>
                 <div class="result-badge ${badgeCls}" style="white-space:nowrap;">${badgeTxt}</div>
               </div>
+              ${ticketSection}
               <div class="reg-card-actions">
                 <button class="btn btn-outline btn-sm"
-                  onclick="selfCancel('${r._id}', '${ev?.name || 'this event'}')"
+                  onclick="selfCancel('${r._id}', '${(ev?.name || 'this event').replace(/'/g, "\\'")}')"
                   id="cancel-btn-${r._id}">
                   Cancel Registration
                 </button>
@@ -163,6 +193,18 @@ window.selfCancel = async function(regId, eventName) {
             }
         }, 350);
     } catch { showToast('Network error', 'error'); }
+};
+
+// ── QR Code toggle ──────────────────────────────────────────────────────
+window.toggleQR = function(regId) {
+    const expand = document.getElementById(`qr-expand-${regId}`);
+    const btn    = document.getElementById(`qr-toggle-${regId}`);
+    if (!expand) return;
+    const open = expand.style.display === 'none' || expand.style.display === '';
+    expand.style.display = open ? 'block' : 'none';
+    btn.innerHTML = open
+        ? '<span>🎫</span> Hide QR Code'
+        : '<span>🎫</span> Show QR Code';
 };
 
 // ── Manage Profile ──────────────────────────────────────────────────

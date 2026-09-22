@@ -1,7 +1,9 @@
 // controllers/registrationController.js — Registration logic including waitlist auto-promotion
 
-const Registration = require('../models/Registration');
-const Event        = require('../models/Event');
+const Registration  = require('../models/Registration');
+const Event         = require('../models/Event');
+const emailService  = require('../utils/emailService');
+const { generateTicketToken } = require('../utils/ticketService');
 
 // ─── POST /api/registrations — Register a student ────────────────────────────
 // If user is authenticated (optionalAuth), auto-fills name/email/dept/year from profile
@@ -44,25 +46,26 @@ exports.register = async (req, res) => {
 
         let registration;
         let status;
-        const userId = req.user ? req.user._id : null;
+        const userId      = req.user ? req.user._id : null;
+        const ticketToken = generateTicketToken();
 
         if (event.confirmedCount < event.capacity) {
             // ── CONFIRMED path ──
             registration = await Registration.findOneAndUpdate(
                 { eventId, email },
                 { name, phone, department, year, status: 'confirmed', waitlistPosition: null,
-                  registeredAt: new Date(), userId },
+                  registeredAt: new Date(), userId, ticketToken },
                 { upsert: true, new: true, setDefaultsOnInsert: true }
             );
             await Event.findByIdAndUpdate(eventId, { $inc: { confirmedCount: 1 } });
             status = 'confirmed';
         } else {
-            // ── WAITLISTED path ──
+            // ── WAITLISTED path — no ticket token until promoted ──
             const position = event.waitlistCount + 1;
             registration = await Registration.findOneAndUpdate(
                 { eventId, email },
                 { name, phone, department, year, status: 'waitlisted', waitlistPosition: position,
-                  registeredAt: new Date(), userId },
+                  registeredAt: new Date(), userId, ticketToken: null },
                 { upsert: true, new: true, setDefaultsOnInsert: true }
             );
             await Event.findByIdAndUpdate(eventId, { $inc: { waitlistCount: 1 } });
@@ -70,6 +73,21 @@ exports.register = async (req, res) => {
         }
 
         res.status(201).json({ registration, status });
+
+        // ── Fire email in background (never blocks response) ──────────────
+        emailService.sendRegistrationConfirmation({
+            to:             email,
+            name,
+            eventName:      event.name,
+            eventDate:      event.date,
+            venue:          event.venue,
+            category:       event.category,
+            status,
+            waitlistPos:    registration.waitlistPosition,
+            ticketToken:    registration.ticketToken,
+            registrationId: registration._id.toString(),
+        }).catch(() => {}); // silent — email never breaks the flow
+
     } catch (err) {
         if (err.code === 11000) {
             return res.status(400).json({ error: 'Duplicate registration (DB constraint)' });
@@ -143,9 +161,11 @@ exports.cancel = async (req, res) => {
             await Event.findByIdAndUpdate(reg.eventId, { $inc: { confirmedCount: -1 } });
 
             // Step 3: Promote first waitlisted student
+            // Assign ticket token to promoted student
+            const promoToken = generateTicketToken();
             promoted = await Registration.findOneAndUpdate(
                 { eventId: reg.eventId, status: 'waitlisted', waitlistPosition: 1 },
-                { status: 'confirmed', waitlistPosition: null },
+                { status: 'confirmed', waitlistPosition: null, ticketToken: promoToken },
                 { new: true }
             );
 
@@ -159,6 +179,17 @@ exports.cancel = async (req, res) => {
                 await Event.findByIdAndUpdate(reg.eventId, {
                     $inc: { confirmedCount: 1, waitlistCount: -1 },
                 });
+
+                // Fire promotion email in background
+                const promoEvent = await Event.findById(reg.eventId).lean();
+                emailService.sendWaitlistPromotion({
+                    to:         promoted.email,
+                    name:       promoted.name,
+                    eventName:  promoEvent?.name  || 'your event',
+                    eventDate:  promoEvent?.date,
+                    venue:      promoEvent?.venue,
+                    ticketToken: promoToken,
+                }).catch(() => {});
             }
         } else {
             // Was waitlisted — shift those behind this student

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify Ticket — MACE FestHub</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .verify-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    .verify-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 40px 36px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      backdrop-filter: blur(20px);
+    }
+    .verify-icon { font-size: 4rem; margin-bottom: 16px; display: block; }
+    .verify-title { font-size: 1.5rem; font-weight: 700; color: var(--t1); margin-bottom: 8px; }
+    .verify-sub   { font-size: .9rem; color: var(--t2); margin-bottom: 28px; }
+
+    .ticket-detail-grid {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 20px;
+      text-align: left;
+      margin: 20px 0;
+    }
+    .td-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .td-row:last-child { border-bottom: none; }
+    .td-label { font-size: .75rem; color: var(--t3); text-transform: uppercase; letter-spacing: .05em; }
+    .td-value  { font-size: .9rem; color: var(--t1); font-weight: 500; text-align: right; }
+
+    .verify-valid   { color: #4ade80; }
+    .verify-invalid { color: #f87171; }
+    .verify-loading { color: var(--t2); }
+    .status-pill {
+      display: inline-block; padding: 6px 20px; border-radius: 999px;
+      font-weight: 700; font-size: .85rem; margin: 16px 0;
+    }
+    .pill-ok  { background: rgba(34,197,94,.15); color: #4ade80; border: 1px solid rgba(34,197,94,.3); }
+    .pill-err { background: rgba(239,68,68,.15);  color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+  </style>
+</head>
+<body>
+  <nav class="navbar" role="navigation">
+    <div class="navbar-inner">
+      <a href="/" class="nav-logo"><span class="logo-icon">⚡</span>MACE FestHub</a>
+    </div>
+  </nav>
+
+  <div class="verify-wrap">
+    <div class="verify-card">
+      <span class="verify-icon" id="v-icon">🔍</span>
+      <div class="verify-title" id="v-title">Verifying Ticket…</div>
+      <div class="verify-sub"   id="v-sub">Please wait</div>
+      <div id="v-pill"></div>
+      <div class="ticket-detail-grid" id="v-details" style="display:none;"></div>
+      <a href="/" class="btn btn-outline btn-sm" style="margin-top:24px; display:inline-block;">← Back to Events</a>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token  = params.get('token');
+
+    async function verify() {
+      if (!token) {
+        setInvalid('No ticket token provided in the URL.');
+        return;
+      }
+      try {
+        const res  = await fetch(`/api/tickets/verify/${encodeURIComponent(token)}`);
+        const data = await res.json();
+
+        if (!res.ok || !data.valid) {
+          setInvalid(data.error || 'Invalid or unrecognised ticket.');
+          return;
+        }
+
+        // Valid ticket
+        document.getElementById('v-icon').textContent  = data.status === 'confirmed' ? '✅' : '⏳';
+        document.getElementById('v-title').textContent = 'Ticket Valid';
+        document.getElementById('v-sub').textContent   =
+          data.status === 'confirmed' ? 'Entry allowed.' : `On waitlist — confirm before entry.`;
+        document.getElementById('v-title').className = 'verify-title verify-valid';
+
+        const pill = document.getElementById('v-pill');
+        pill.innerHTML = data.status === 'confirmed'
+          ? `<span class="status-pill pill-ok">✓ CONFIRMED</span>`
+          : `<span class="status-pill pill-err">⏳ WAITLISTED</span>`;
+
+        const date = data.date ? new Date(data.date).toLocaleDateString('en-IN',
+          { weekday:'long', day:'numeric', month:'long', year:'numeric' }) : 'TBD';
+
+        const rows = [
+          { label: 'Name',    value: data.name  || '—' },
+          { label: 'Email',   value: data.email || '—' },
+          { label: 'Event',   value: data.event || '—' },
+          { label: 'Date',    value: date },
+          { label: 'Venue',   value: data.venue || 'TBD' },
+          { label: 'Ticket',  value: `<span style="font-family:monospace; color:var(--primary-h);">${data.token}</span>` },
+        ];
+        const det = document.getElementById('v-details');
+        det.style.display = 'block';
+        det.innerHTML = rows.map(r =>
+          `<div class="td-row">
+             <span class="td-label">${r.label}</span>
+             <span class="td-value">${r.value}</span>
+           </div>`
+        ).join('');
+      } catch {
+        setInvalid('Network error. Could not verify ticket.');
+      }
+    }
+
+    function setInvalid(msg) {
+      document.getElementById('v-icon').textContent  = '❌';
+      document.getElementById('v-title').textContent = 'Invalid Ticket';
+      document.getElementById('v-title').className   = 'verify-title verify-invalid';
+      document.getElementById('v-sub').textContent   = msg;
+      document.getElementById('v-pill').innerHTML    = `<span class="status-pill pill-err">NOT VALID</span>`;
+    }
+
+    verify();
+  </script>
+</body>
+</html>

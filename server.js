@@ -44,6 +44,12 @@ app.use('/api/proposals',     require('./routes/proposals'));
 app.use('/api/events',        require('./routes/events'));
 app.use('/api/registrations', require('./routes/registrations'));
 app.use('/api/fa-requests',   require('./routes/faRequests'));
+app.use('/api/tickets',       require('./routes/tickets'));
+
+// Ticket verification page (for QR scan redirect)
+app.get('/verify', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'verify.html'));
+});
 
 // Note: Named HTML pages (login.html, admin.html, profile.html) are served
 // directly by express.static above. No SPA catch-all needed.

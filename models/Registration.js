@@ -55,6 +55,11 @@ const registrationSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    // Unique ticket token — encoded in QR code for entry verification
+    ticketToken: {
+        type: String,
+        default: null,
+    },
 });
 
 // Compound unique index — prevents a student from registering twice for same event
