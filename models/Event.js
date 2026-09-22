@@ -40,6 +40,11 @@ const eventSchema = new mongoose.Schema({
         min: [1, 'Capacity must be at least 1'],
         default: 50,
     },
+    fee: {
+        type: Number,
+        default: 0,
+        min: [0, 'Fee cannot be negative'],
+    },
     // Denormalized counts — updated atomically with $inc to avoid COUNT(*) queries
     confirmedCount: { type: Number, default: 0, min: 0 },
     waitlistCount: { type: Number, default: 0, min: 0 },

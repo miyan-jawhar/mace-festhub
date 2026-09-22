@@ -103,6 +103,7 @@ async function seed() {
         confirmedCount: 18,
         waitlistCount:  0,
         eventUrl:    'https://mace.ac.in',
+        fee:         150, // Added fee for Razorpay test
     });
 
     // 2. ALMOST FULL — 3 seats left (shows "3 seats left" amber warning)

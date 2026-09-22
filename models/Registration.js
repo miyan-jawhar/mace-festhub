@@ -60,6 +60,15 @@ const registrationSchema = new mongoose.Schema({
         type: String,
         default: null,
     },
+    // Razorpay payment tracking
+    paymentId: {
+        type: String,
+        default: null,
+    },
+    razorpayOrderId: {
+        type: String,
+        default: null,
+    }
 });
 
 // Compound unique index — prevents a student from registering twice for same event

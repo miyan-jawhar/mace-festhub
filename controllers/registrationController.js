@@ -4,8 +4,15 @@ const Registration  = require('../models/Registration');
 const Event         = require('../models/Event');
 const emailService  = require('../utils/emailService');
 const calendarService = require('../utils/calendarService');
+const Razorpay      = require('razorpay');
+const crypto        = require('crypto');
 const { generateTicketToken } = require('../utils/ticketService');
 
+// Initialize Razorpay instance (using test credentials from .env)
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret'
+});
 // ─── POST /api/registrations — Register a student ────────────────────────────
 // If user is authenticated (optionalAuth), auto-fills name/email/dept/year from profile
 exports.register = async (req, res) => {
@@ -45,6 +52,48 @@ exports.register = async (req, res) => {
             return res.status(400).json({ error: 'Cannot register for a past event' });
         }
 
+        // ── Razorpay Payment Flow ────────────────────────────────────────────────
+        let paymentId = null;
+        let razorpayOrderId = null;
+
+        if (event.fee > 0) {
+            const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+
+            // Step 1: No payment details yet -> Create Razorpay Order and return 402
+            if (!razorpay_payment_id) {
+                const options = {
+                    amount: event.fee * 100, // amount in smallest currency unit (paise)
+                    currency: "INR",
+                    receipt: `receipt_event_${event._id}_${Date.now()}`
+                };
+                try {
+                    const order = await razorpay.orders.create(options);
+                    return res.status(402).json({
+                        error: 'Payment required',
+                        order_id: order.id,
+                        amount: order.amount,
+                        currency: order.currency,
+                        key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key'
+                    });
+                } catch (err) {
+                    return res.status(500).json({ error: 'Failed to create payment order' });
+                }
+            }
+
+            // Step 2: Payment details provided -> Verify Signature
+            const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'dummy_secret');
+            hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+            const expectedSignature = hmac.digest('hex');
+
+            if (expectedSignature !== razorpay_signature) {
+                return res.status(400).json({ error: 'Payment verification failed (Invalid signature)' });
+            }
+
+            paymentId = razorpay_payment_id;
+            razorpayOrderId = razorpay_order_id;
+        }
+        // ──────────────────────────────────────────────────────────────────────────
+
         let registration;
         let status;
         const userId      = req.user ? req.user._id : null;
@@ -55,18 +104,18 @@ exports.register = async (req, res) => {
             registration = await Registration.findOneAndUpdate(
                 { eventId, email },
                 { name, phone, department, year, status: 'confirmed', waitlistPosition: null,
-                  registeredAt: new Date(), userId, ticketToken },
+                  registeredAt: new Date(), userId, ticketToken, paymentId, razorpayOrderId },
                 { upsert: true, new: true, setDefaultsOnInsert: true }
             );
             await Event.findByIdAndUpdate(eventId, { $inc: { confirmedCount: 1 } });
             status = 'confirmed';
         } else {
             // ── WAITLISTED path — no ticket token until promoted ──
-            const position = event.waitlistCount + 1;
+            const waitlistPos = event.waitlistCount + 1;
             registration = await Registration.findOneAndUpdate(
                 { eventId, email },
-                { name, phone, department, year, status: 'waitlisted', waitlistPosition: position,
-                  registeredAt: new Date(), userId, ticketToken: null },
+                { name, phone, department, year, status: 'waitlisted', waitlistPosition: waitlistPos,
+                  registeredAt: new Date(), userId, ticketToken, paymentId, razorpayOrderId },
                 { upsert: true, new: true, setDefaultsOnInsert: true }
             );
             await Event.findByIdAndUpdate(eventId, { $inc: { waitlistCount: 1 } });

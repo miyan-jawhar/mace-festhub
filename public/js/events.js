@@ -82,6 +82,7 @@ function renderCards(events) {
           <div class="card-meta">
             <div class="card-meta-item"><span class="icon">📅</span>${formatDate(ev.date)}</div>
             <div class="card-meta-item"><span class="icon">📍</span>${ev.venue || 'TBD'}</div>
+            ${ev.fee > 0 ? `<div class="card-meta-item"><span class="icon">💳</span>₹${ev.fee}</div>` : `<div class="card-meta-item"><span class="icon">💳</span>Free</div>`}
             ${ev.eventUrl ? `<div class="card-meta-item"><span class="icon">🔗</span><a href="${ev.eventUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--primary-h);text-decoration:none;font-weight:500;">Learn More →</a></div>` : ''}
           </div>
           <div class="capacity-wrap">
@@ -278,45 +279,106 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
         });
         const data = await res.json();
 
+        if (res.status === 402) {
+            // Payment required
+            const options = {
+                key: data.key_id,
+                amount: data.amount,
+                currency: data.currency,
+                name: "MACE FestHub",
+                description: `Payment for ${document.getElementById('modal-title').textContent}`,
+                order_id: data.order_id,
+                handler: async function (response) {
+                    // Re-submit registration with payment details
+                    payload.razorpay_payment_id = response.razorpay_payment_id;
+                    payload.razorpay_order_id = response.razorpay_order_id;
+                    payload.razorpay_signature = response.razorpay_signature;
+                    
+                    showToast('Payment successful. Finalizing registration...', 'info');
+                    
+                    try {
+                        const finalRes = await fetch(`${API}/api/registrations`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify(payload)
+                        });
+                        const finalData = await finalRes.json();
+                        if (!finalRes.ok) throw new Error(finalData.error || 'Failed to finalize');
+                        handleRegistrationSuccess(finalData, payload);
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                    } finally {
+                        submitBtn.disabled = false;
+                        document.getElementById('reg-btn-text').textContent = 'Register Now';
+                    }
+                },
+                prefill: {
+                    name: payload.name,
+                    email: payload.email,
+                    contact: payload.phone
+                },
+                theme: {
+                    color: "#3b82f6"
+                }
+            };
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response){
+                showToast('Payment failed: ' + response.error.description, 'error');
+                submitBtn.disabled = false;
+                document.getElementById('reg-btn-text').textContent = 'Register Now';
+            });
+            rzp.open();
+            return; // Wait for Razorpay callback
+        }
+
         if (!res.ok) {
             showToast(data.error || 'Registration failed', 'error');
             return;
         }
 
-        // Show result view
-        formView.style.display   = 'none';
-        resultView.style.display = 'block';
-
-        if (data.status === 'confirmed') {
-            document.getElementById('result-icon').textContent  = '🎉';
-            document.getElementById('result-title').textContent = 'Registration Confirmed!';
-            document.getElementById('result-msg').textContent   = `You're all set, ${payload.name}!`;
-            const badge = document.getElementById('result-badge');
-            badge.className = 'result-badge result-confirmed';
-            badge.textContent = '✓ Confirmed';
-        } else {
-            const pos = data.registration?.waitlistPosition || '?';
-            document.getElementById('result-icon').textContent  = '⏳';
-            document.getElementById('result-title').textContent = 'Added to Waitlist';
-            document.getElementById('result-msg').textContent   = `The event is full. You're #${pos} on the waitlist.`;
-            const badge = document.getElementById('result-badge');
-            badge.className = 'result-badge result-waitlisted';
-            badge.textContent = `Waitlist #${pos}`;
-        }
-
-        // If logged in, hint them to their profile
-        const user = getUser();
-        if (user) {
-            showToast('View your registrations on your <a href="/profile.html" style="color:var(--primary-h);text-decoration:underline;">Profile page</a>', 'success');
-        }
+        handleRegistrationSuccess(data, payload);
     } catch (err) {
         showToast('Network error. Please try again.', 'error');
-    } finally {
         submitBtn.disabled = false;
         document.getElementById('reg-btn-text').textContent = 'Register Now';
     }
 });
 
+function handleRegistrationSuccess(data, payload) {
+    // Show result view
+    formView.style.display   = 'none';
+    resultView.style.display = 'block';
+
+    if (data.status === 'confirmed') {
+        document.getElementById('result-icon').textContent  = '🎉';
+        document.getElementById('result-title').textContent = 'Registration Confirmed!';
+        document.getElementById('result-msg').textContent   = `You're all set, ${payload.name}!`;
+        const badge = document.getElementById('result-badge');
+        badge.className = 'result-badge result-confirmed';
+        badge.textContent = '✓ Confirmed';
+    } else {
+        const pos = data.registration?.waitlistPosition || '?';
+        document.getElementById('result-icon').textContent  = '⏳';
+        document.getElementById('result-title').textContent = 'Added to Waitlist';
+        document.getElementById('result-msg').textContent   = `The event is full. You're #${pos} on the waitlist.`;
+        const badge = document.getElementById('result-badge');
+        badge.className = 'result-badge result-waitlisted';
+        badge.textContent = `Waitlist #${pos}`;
+    }
+
+    // If logged in, hint them to their profile
+    const user = getUser();
+    if (user) {
+        showToast('View your registrations on your <a href="/profile.html" style="color:var(--primary-h);text-decoration:underline;">Profile page</a>', 'success');
+    }
+    
+    // Reset button state
+    const submitBtn = document.getElementById('reg-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        document.getElementById('reg-btn-text').textContent = 'Register Now';
+    }
+}
 // ── Init ───────────────────────────────────────────────────────────────
 renderNavAuth();
 fetchEvents();
