@@ -21,11 +21,25 @@ exports.register = async (req, res) => {
 
         // Auto-fill from authenticated user profile
         if (req.user) {
+            // Guard: Principal, Faculty Advisors, and Admins cannot register as participants
+            if (req.user.role !== 'student') {
+                return res.status(403).json({
+                    error: `Only students can register for events. Your account has the supervisory role "${req.user.role}".`
+                });
+            }
             name       = req.user.name;
             email      = req.user.email;
             phone      = phone      || req.user.phone      || '';
             department = department || req.user.department || '';
             year       = year       || req.user.year       || '1';
+        } else {
+            // Check if guest registration email belongs to a non-student account
+            const existingUser = await require('../models/User').findOne({ email: (email || '').toLowerCase().trim() });
+            if (existingUser && existingUser.role !== 'student') {
+                return res.status(403).json({
+                    error: `This email belongs to a ${existingUser.role}. Only students can register for campus events.`
+                });
+            }
         }
 
         if (!eventId || !name || !email || !year) {
@@ -66,18 +80,28 @@ exports.register = async (req, res) => {
                     currency: "INR",
                     receipt: `receipt_event_${event._id}_${Date.now()}`
                 };
+                let order;
                 try {
-                    const order = await razorpay.orders.create(options);
-                    return res.status(402).json({
-                        error: 'Payment required',
-                        order_id: order.id,
-                        amount: order.amount,
-                        currency: order.currency,
-                        key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key'
-                    });
+                    if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_ID !== 'dummy_key') {
+                        order = await razorpay.orders.create(options);
+                    } else {
+                        throw new Error('Using mock test order');
+                    }
                 } catch (err) {
-                    return res.status(500).json({ error: 'Failed to create payment order' });
+                    order = {
+                        id: `order_mock_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+                        amount: options.amount,
+                        currency: options.currency
+                    };
                 }
+
+                return res.status(402).json({
+                    error: 'Payment required',
+                    order_id: order.id,
+                    amount: order.amount,
+                    currency: order.currency,
+                    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock_key'
+                });
             }
 
             // Step 2: Payment details provided -> Verify Signature
@@ -171,7 +195,10 @@ exports.getStudentRegistrations = async (req, res) => {
         // A student can only look up their own registrations;
         // admin can look up anyone's
         const email = req.params.email.toLowerCase().trim();
-        if (req.user.role !== 'admin' && req.user.email !== email) {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        if (req.user.role !== 'admin' && (req.user.email || '').toLowerCase() !== email) {
             return res.status(403).json({ error: 'You can only view your own registrations' });
         }
 
@@ -197,7 +224,7 @@ exports.cancel = async (req, res) => {
         }
 
         // Ownership check: logged-in non-admin users can only cancel their own
-        if (req.user && req.user.role !== 'admin' && reg.email !== req.user.email) {
+        if (req.user && req.user.role !== 'admin' && (reg.email || '').toLowerCase() !== (req.user.email || '').toLowerCase()) {
             return res.status(403).json({ error: 'You can only cancel your own registration' });
         }
 

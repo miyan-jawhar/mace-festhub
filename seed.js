@@ -25,7 +25,7 @@ const Event        = require('./models/Event');
 const Registration = require('./models/Registration');
 const { generateTicketToken } = require('./utils/ticketService');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mace_festhub';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mace_eventhub';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const future = (daysFromNow, hour = 9) => {

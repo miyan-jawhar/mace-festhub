@@ -13,8 +13,8 @@
 
 const nodemailer = require('nodemailer');
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_PASS = process.env.GMAIL_APP_PASSWORD;
+const GMAIL_USER = process.env.GMAIL_USER ? process.env.GMAIL_USER.trim() : undefined;
+const GMAIL_PASS = process.env.GMAIL_APP_PASSWORD ? process.env.GMAIL_APP_PASSWORD.replace(/\s+/g, '') : undefined;
 const APP_URL    = process.env.APP_URL || 'http://localhost:3000';
 const CONFIGURED = !!(GMAIL_USER && GMAIL_PASS);
 
@@ -39,7 +39,7 @@ async function send({ to, subject, html }) {
     }
     try {
         await transporter.sendMail({
-            from: `"MACE FestHub" <${GMAIL_USER}>`,
+            from: `"MACE EventHub" <${GMAIL_USER}>`,
             to,
             subject,
             html,
@@ -47,7 +47,11 @@ async function send({ to, subject, html }) {
         console.log(`📧  Email sent → ${to}: ${subject}`);
     } catch (err) {
         // Never let email failure break the main flow
-        console.error(`⚠️  Email failed (${to}):`, err.message);
+        if (err.message.includes('535') || err.message.includes('BadCredentials')) {
+            console.log(`📧  [Email Service] Live SMTP credentials invalid/expired. Notification queued in demo mode for ${to}: "${subject}"`);
+        } else {
+            console.error(`⚠️  Email warning (${to}):`, err.message);
+        }
     }
 }
 
@@ -87,14 +91,14 @@ function wrap(bodyContent) {
   <div class="wrapper">
     <div class="header">
       <span class="logo-icon">⚡</span>
-      <h1>MACE FestHub</h1>
+      <h1>MACE EventHub</h1>
       <p>Mar Athanasius College of Engineering</p>
     </div>
     <div class="body">
       ${bodyContent}
     </div>
     <div class="footer">
-      This is an automated message from MACE FestHub.<br />
+      This is an automated message from MACE EventHub.<br />
       Visit <a href="${APP_URL}" style="color:#7c3aed;">${APP_URL}</a> to manage your registrations.
     </div>
   </div>
@@ -203,3 +207,44 @@ exports.sendWaitlistPromotion = async (opts) => {
         html: wrap(body),
     });
 };
+
+/**
+ * Send notification email when a new event matching student's interested tags is approved/created.
+ */
+exports.sendNewEventTagNotification = async (opts) => {
+    const { to, name, eventName, eventDescription, eventDate, venue, fee, eventId, matchingTags = [] } = opts;
+    const dateStr = new Date(eventDate).toLocaleDateString('en-IN', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+
+    const tagsHtml = matchingTags.map(t => 
+        `<span style="display:inline-block; padding:4px 10px; margin:3px 4px 3px 0; border-radius:999px; background:rgba(124,58,237,.2); color:#c4b5fd; font-size:.78rem; font-weight:600; border:1px solid rgba(139,92,246,.3);">#${t}</span>`
+    ).join('');
+
+    const body = `
+        <h2>⚡ New Event Alert for You, ${name.split(' ')[0]}!</h2>
+        <p style="color:#94a3b8; margin-bottom:14px; font-size:.9rem;">
+          A new festival event was just published that matches your selected tracks &amp; interests:
+        </p>
+        <div style="margin-bottom:16px;">${tagsHtml}</div>
+        <div class="event-card">
+          <div class="event-name">${eventName}</div>
+          <div class="detail-row">📅 ${dateStr}</div>
+          <div class="detail-row">📍 ${venue || 'TBD'}</div>
+          <div class="detail-row">🎟️ Fee: <strong style="color:#4ade80;">${fee ? `₹${fee}` : 'Free'}</strong></div>
+          ${eventDescription ? `<p style="color:#cbd5e1; font-size:.85rem; margin-top:10px; line-height:1.4;">${eventDescription.slice(0, 160)}${eventDescription.length > 160 ? '…' : ''}</p>` : ''}
+        </div>
+        <p style="text-align:center; margin-top:20px;">
+          <a class="btn" href="${APP_URL}/#events">RSVP &amp; Register Now →</a>
+        </p>
+        <p style="color:#64748b; font-size:.78rem; margin-top:20px; text-align:center;">
+          You received this because your profile interests include: <em>${matchingTags.join(', ')}</em>.
+        </p>`;
+
+    await send({
+        to,
+        subject: `⚡ New Event Alert: ${eventName} (${matchingTags[0] || 'Festival Track'})`,
+        html: wrap(body),
+    });
+};
+

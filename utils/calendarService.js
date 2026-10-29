@@ -9,21 +9,21 @@ const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 const oauth2Client = new google.auth.OAuth2(
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
-    '/api/auth/google/callback'
+    `${APP_URL}/api/auth/google/callback`
 );
 
 /**
  * Adds an event to the user's Google Calendar if they have a connected Google account.
  * 
  * @param {string} userId - The MongoDB User ID
- * @param {Object} event - The MACE FestHub Event object
+ * @param {Object} event - The MACE EventHub Event object
  * @param {Object} registration - The student's Registration object
  */
 exports.addEventToCalendar = async (userId, event, registration) => {
     try {
         const user = await User.findById(userId).select('+googleRefreshToken');
         if (!user || !user.googleRefreshToken) {
-            console.log(`📅  [Calendar] User ${userId} does not have a Google Refresh Token. Skipping.`);
+            // Normal: student registered with email/password; Google Calendar sync is active for OAuth users
             return;
         }
 
@@ -50,7 +50,7 @@ ${event.description || 'No additional details.'}
         `.trim();
 
         const calendarEvent = {
-            summary: `${event.name} - MACE FestHub`,
+            summary: `${event.name} - MACE EventHub`,
             location: event.venue || 'MACE Campus',
             description,
             start: {

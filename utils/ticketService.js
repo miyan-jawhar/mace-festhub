@@ -10,7 +10,7 @@ const APP_URL = process.env.APP_URL || 'http://localhost:3000';
  * Collision probability at 10k tokens ≈ 0.002% — fine for a college event system.
  */
 function generateTicketToken() {
-    return crypto.randomBytes(5).toString('base64url').toUpperCase().slice(0, 8);
+    return crypto.randomBytes(6).toString('base64url').toUpperCase().slice(0, 8);
 }
 
 /**

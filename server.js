@@ -1,4 +1,4 @@
-// server.js — Entry point for MACE FestHub
+// server.js — Entry point for MACE EventHub
 // Sets up Express app, connects to MongoDB Atlas, and starts the server
 
 const express  = require('express');
@@ -52,13 +52,16 @@ app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
-app.use('/api/auth',          require('./routes/auth'));
-app.use('/api/clubs',         require('./routes/clubs'));
-app.use('/api/proposals',     require('./routes/proposals'));
-app.use('/api/events',        require('./routes/events'));
-app.use('/api/registrations', require('./routes/registrations'));
-app.use('/api/fa-requests',   require('./routes/faRequests'));
-app.use('/api/tickets',       require('./routes/tickets'));
+app.use('/api/auth',             require('./routes/auth'));
+app.use('/api/clubs',            require('./routes/clubs'));
+app.use('/api/proposals',        require('./routes/proposals'));
+app.use('/api/events',           require('./routes/events'));
+app.use('/api/registrations',    require('./routes/registrations'));
+app.use('/api/fa-requests',      require('./routes/faRequests'));
+app.use('/api/officer-requests', require('./routes/clubOfficerRequests'));
+app.use('/api/tickets',          require('./routes/tickets'));
+app.use('/api/tags',             require('./routes/tags'));
+app.use('/api/ai',               require('./routes/ai'));
 
 // Ticket verification page (for QR scan redirect)
 app.get('/verify', (req, res) => {
