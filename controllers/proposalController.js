@@ -1,8 +1,11 @@
 // controllers/proposalController.js — Event proposal with FA → Principal approval workflow
 
-const Proposal    = require('../models/Proposal');
-const Club        = require('../models/Club');
-const Event       = require('../models/Event');
+const Proposal     = require('../models/Proposal');
+const Club         = require('../models/Club');
+const Event        = require('../models/Event');
+const Tag          = require('../models/Tag');
+const User         = require('../models/User');
+const emailService = require('../utils/emailService');
 
 // ─── Helper: get user's officer membership in a club ──────────────────────────
 async function getClubOfficerRole(userId, clubId) {
@@ -13,33 +16,96 @@ async function getClubOfficerRole(userId, clubId) {
     return ['president', 'secretary'].includes(member.clubRole) ? { club, member } : null;
 }
 
+// ─── Helper: Notify students whose profile interests match event tags ─────────
+async function notifyMatchingStudents(event, eventTags) {
+    try {
+        if (!eventTags || eventTags.length === 0) return;
+        const regexes = eventTags.map(t => new RegExp(`^${t.trim()}$`, 'i'));
+        const students = await User.find({
+            role: 'student',
+            interests: { $in: regexes },
+        });
+
+        console.log(`🔔 Found ${students.length} student(s) interested in tags [${eventTags.join(', ')}] for event "${event.name}"`);
+
+        for (const student of students) {
+            const matched = (student.interests || []).filter(interest =>
+                eventTags.some(t => t.toLowerCase() === interest.toLowerCase())
+            );
+            emailService.sendNewEventTagNotification({
+                to: student.email,
+                name: student.name,
+                eventName: event.name,
+                eventDescription: event.description,
+                eventDate: event.date,
+                venue: event.venue,
+                fee: event.fee,
+                eventId: event._id.toString(),
+                matchingTags: matched.length > 0 ? matched : eventTags,
+            }).catch(err => {
+                console.error(`Failed to send tag alert to ${student.email}:`, err.message);
+            });
+        }
+    } catch (err) {
+        console.error('Error in notifyMatchingStudents:', err.message);
+    }
+}
+
 // ─── POST /api/proposals — Submit a new proposal ──────────────────────────────
 exports.createProposal = async (req, res) => {
     try {
-        const { title, description, date, time, venue, category, capacity, clubId } = req.body;
+        const { title, description, date, time, venue, category, capacity, fee, tags, clubId } = req.body;
 
         if (!title || !date || !capacity || !clubId) {
             return res.status(400).json({ error: 'title, date, capacity, and clubId are required' });
         }
 
-        // Admin can always propose; others must be a club officer
+        // Parse and sanitize tags
+        let parsedTags = [];
+        if (Array.isArray(tags)) parsedTags = tags.map(t => String(t).trim()).filter(Boolean);
+        else if (typeof tags === 'string') parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+
+        // Auto-save new tags in Tag collection in background
+        if (parsedTags.length > 0) {
+            for (const tName of parsedTags) {
+                Tag.findOneAndUpdate(
+                    { name: { $regex: new RegExp(`^${tName}$`, 'i') } },
+                    { $setOnInsert: { name: tName, category: category || 'general' } },
+                    { upsert: true }
+                ).catch(() => {});
+            }
+        }
+
+        // Admin and Faculty Advisor of the club can propose; student members must be club officers
         let club;
-        if (req.user.role === 'admin') {
+        let initialStatus = 'pending_fa';
+
+        if (['admin', 'principal'].includes(req.user.role)) {
             club = await Club.findById(clubId);
             if (!club) return res.status(404).json({ error: 'Club not found' });
+            if (req.user.role === 'principal') initialStatus = 'pending_principal';
+        } else if (req.user.role === 'faculty_advisor') {
+            club = await Club.findById(clubId);
+            if (!club) return res.status(404).json({ error: 'Club not found' });
+            if (club.facultyAdvisor?.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ error: 'You are not the faculty advisor for this club' });
+            }
+            initialStatus = 'pending_principal';
         } else {
             const result = await getClubOfficerRole(req.user._id, clubId);
             if (!result) {
-                return res.status(403).json({ error: 'You must be a club president or secretary to propose events' });
+                return res.status(403).json({ error: 'You must be a club officer or faculty advisor to propose events' });
             }
             club = result.club;
         }
 
         const proposal = new Proposal({
             title, description, date, time, venue, category, capacity,
+            fee: Number(fee) || 0,
+            tags: parsedTags,
             club: clubId,
             proposedBy: req.user._id,
-            status: 'pending_fa',
+            status: initialStatus,
         });
         await proposal.save();
         await proposal.populate([
@@ -147,9 +213,18 @@ exports.approveProposal = async (req, res) => {
                 venue:       proposal.venue || 'TBD',
                 category:    proposal.category || 'technical',
                 capacity:    proposal.capacity,
+                fee:         proposal.fee || 0,
+                tags:        proposal.tags || [],
             });
             await newEvent.save();
             proposal.createdEventId = newEvent._id;
+
+            // Notify students whose profile interests match the approved event tags
+            if (proposal.tags && proposal.tags.length > 0) {
+                notifyMatchingStudents(newEvent, proposal.tags).catch(err => {
+                    console.error('Error notifying matching students on approval:', err.message);
+                });
+            }
 
         } else {
             return res.status(400).json({ error: `Proposal is already ${proposal.status}` });

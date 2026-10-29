@@ -19,6 +19,15 @@ const proposalSchema = new mongoose.Schema({
         required: [true, 'Capacity is required'],
         min: [1, 'Capacity must be at least 1'],
     },
+    fee: {
+        type: Number,
+        default: 0,
+        min: [0, 'Fee cannot be negative'],
+    },
+    tags: {
+        type: [String],
+        default: [],
+    },
 
     // Ownership
     club:       { type: mongoose.Schema.Types.ObjectId, ref: 'Club', required: true },

@@ -129,12 +129,27 @@ exports.removeMember = async (req, res) => {
     }
 };
 
+// ─── DELETE /api/clubs/:id — Delete a club (Principal + Admin) ───────────────
+exports.deleteClub = async (req, res) => {
+    try {
+        const club = await Club.findById(req.params.id);
+        if (!club) return res.status(404).json({ error: 'Club not found' });
+        await Club.deleteOne({ _id: club._id });
+        res.json({ message: `Club "${club.name}" deleted successfully` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 // ─── GET /api/clubs/my — Clubs where logged-in user is an officer ─────────────
 exports.getMyClubs = async (req, res) => {
     try {
         const userId = req.user._id;
         const clubs = await Club.find({
-            members: { $elemMatch: { userId, clubRole: { $in: ['president', 'secretary'] } } },
+            $or: [
+                { members: { $elemMatch: { userId, clubRole: { $in: ['president', 'secretary'] } } } },
+                { facultyAdvisor: userId },
+            ],
         })
             .populate('facultyAdvisor', 'name email')
             .populate('members.userId', 'name email');

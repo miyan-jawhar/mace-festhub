@@ -66,8 +66,11 @@ exports.getAllRequests = async (req, res) => {
             .populate('requestedBy', 'name email department')
             .populate('club',        'name description')
             .populate('reviewedBy',  'name')
-            .sort({ createdAt: 1 });
-        res.json(requests);
+            .sort({ createdAt: -1 });
+
+        // Filter out any orphaned requests where the user or club was deleted
+        const validRequests = requests.filter(r => r.requestedBy && r.club);
+        res.json(validRequests);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -93,6 +96,12 @@ exports.approveRequest = async (req, res) => {
         if (!request) return res.status(404).json({ error: 'Request not found' });
         if (request.status !== 'pending') {
             return res.status(400).json({ error: `Request is already ${request.status}` });
+        }
+        if (!request.requestedBy) {
+            return res.status(400).json({ error: 'The user who requested this no longer exists.' });
+        }
+        if (!request.club) {
+            return res.status(400).json({ error: 'The requested club no longer exists.' });
         }
 
         // 1. Set the user's role to faculty_advisor

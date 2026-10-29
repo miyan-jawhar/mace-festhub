@@ -2,6 +2,7 @@
 
 const jwt  = require('jsonwebtoken');
 const User = require('../models/User');
+const Tag  = require('../models/Tag');
 
 const SECRET  = process.env.JWT_SECRET || 'mace_festhub_jwt_secret_2026_lab';
 const EXPIRES = '7d';
@@ -12,15 +13,33 @@ const PRIVILEGED_ROLES = ['faculty_advisor', 'principal', 'admin'];
 // Email of the hardcoded principal (cannot be demoted via API)
 const PRINCIPAL_EMAIL = (process.env.PRINCIPAL_EMAIL || 'principal@mace.ac.in').toLowerCase();
 
-exports.signToken = function(user) {
+function parseTags(input) {
+    if (!input) return [];
+    if (Array.isArray(input)) return input.map(t => String(t).trim()).filter(Boolean);
+    if (typeof input === 'string') return input.split(',').map(t => t.trim()).filter(Boolean);
+    return [];
+}
+
+async function autoSaveNewTags(tags = []) {
+    for (const tagName of tags) {
+        if (!tagName) continue;
+        await Tag.findOneAndUpdate(
+            { name: { $regex: new RegExp(`^${tagName}$`, 'i') } },
+            { $setOnInsert: { name: tagName, category: 'general' } },
+            { upsert: true }
+        ).catch(() => {});
+    }
+}
+
+function signToken(user) {
     return jwt.sign(
         { id: user._id, role: user.role },
         SECRET,
         { expiresIn: EXPIRES }
     );
-};
+}
 
-exports.publicUser = function(user) {
+function publicUser(user) {
     return {
         id:         user._id,
         name:       user.name,
@@ -29,17 +48,25 @@ exports.publicUser = function(user) {
         department: user.department,
         year:       user.year,
         phone:      user.phone,
+        interests:  user.interests || [],
     };
-};
+}
+
+exports.signToken = signToken;
+exports.publicUser = publicUser;
+exports.parseTags = parseTags;
+exports.autoSaveNewTags = autoSaveNewTags;
 
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
 exports.register = async (req, res) => {
     try {
-        const { name, email, password, department, year, phone } = req.body;
+        const { name, email, password, department, year, phone, interests } = req.body;
 
         if (!name || !email || !password) {
             return res.status(400).json({ error: 'Name, email, and password are required' });
         }
+
+        const parsedInterests = parseTags(interests);
 
         // All self-registrations are students — no privileged role selection
         const user = new User({
@@ -48,8 +75,10 @@ exports.register = async (req, res) => {
             department: department || '',
             year: (year && ['1','2','3','4'].includes(year)) ? year : 'N/A',
             phone: phone || '',
+            interests: parsedInterests,
         });
         await user.save();
+        autoSaveNewTags(parsedInterests).catch(() => {});
 
         const token = exports.signToken(user);
         res.status(201).json({ token, user: exports.publicUser(user) });
@@ -89,6 +118,7 @@ exports.getMe = async (req, res) => {
         res.json({
             id: user._id, name: user.name, email: user.email, role: user.role,
             department: user.department, year: user.year, phone: user.phone,
+            interests: user.interests || [],
             createdAt: user.createdAt,
         });
     } catch (err) {
@@ -99,12 +129,18 @@ exports.getMe = async (req, res) => {
 // ─── PUT /api/auth/me — Update own profile (not password / role) ──────────────
 exports.updateMe = async (req, res) => {
     try {
-        const { name, department, year, phone } = req.body;
+        const { name, department, year, phone, interests } = req.body;
         const allowed = {};
         if (name)                              allowed.name       = name.trim();
         if (department !== undefined)          allowed.department = department.trim();
         if (year && ['1','2','3','4','N/A'].includes(year)) allowed.year = year;
         if (phone !== undefined)               allowed.phone      = phone.trim();
+
+        if (interests !== undefined) {
+            const parsed = parseTags(interests);
+            allowed.interests = parsed;
+            autoSaveNewTags(parsed).catch(() => {});
+        }
 
         const user = await User.findByIdAndUpdate(req.user._id, allowed, {
             new: true, runValidators: true,

@@ -8,12 +8,19 @@ const SECRET = process.env.JWT_SECRET || 'mace_festhub_jwt_secret_2026_lab';
 // ─── requireAuth ─────────────────────────────────────────────────────────────
 // Blocks the request if no valid JWT is provided.
 exports.requireAuth = async (req, res, next) => {
+    let token;
     const header = req.headers.authorization;
-    if (!header || !header.startsWith('Bearer ')) {
+    if (header && header.startsWith('Bearer ')) {
+        token = header.split(' ')[1];
+    } else if (req.query && req.query.token) {
+        token = req.query.token;
+    }
+
+    if (!token) {
         return res.status(401).json({ error: 'Authentication required' });
     }
+
     try {
-        const token = header.split(' ')[1];
         const decoded = jwt.verify(token, SECRET);
         // Attach fresh user from DB (catches deleted / role-changed users)
         req.user = await User.findById(decoded.id);

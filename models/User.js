@@ -46,6 +46,10 @@ const userSchema = new mongoose.Schema({
         default: 'N/A',
     },
     phone: { type: String, trim: true, default: '' },
+    interests: {
+        type: [String],
+        default: [],
+    },
     createdAt: { type: Date, default: Date.now },
 });
 
