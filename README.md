@@ -1,10 +1,9 @@
 # MACE EventHub — Campus Event Management & Registration Platform
 
-> **Web Programming Lab — Experiment 11**  
-> B.Tech Computer Science and Engineering (Data Science)  
+> B.Tech Computer Science and Engineering (Data Science)
 > Mar Athanasius College of Engineering (MACE)
 
-A full-stack campus event management and registration platform built with **Node.js, Express, and MongoDB Atlas**. The system handles institutional governance, multi-tier approvals, role-based workflows, automated queue management, digital ticketing, payment processing, calendar synchronization, and Google Gemini AI integration.
+A full-stack campus event management and registration platform built with **Node.js, Express, and MongoDB Atlas**. The system handles institutional governance, multi-tier approvals, role-based workflows, automated queue management, digital ticketing, Razorpay payment processing, Google calendar synchronization, and Gemini AI integration.
 
 ---
 
@@ -301,6 +300,5 @@ The server will bind to `http://localhost:3000`.
 
 ## 📜 Academic Attribution
 
-Developed for **Web Programming Lab (Experiment 11)**  
-Department of Computer Science and Engineering (Data Science)  
+Developed as a prototype for:
 **Mar Athanasius College of Engineering (MACE), Kothamangalam**
