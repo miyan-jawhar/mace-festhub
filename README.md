@@ -1,13 +1,13 @@
-# MACE EventHub — Campus Event Management & Registration Platform
+# MACE EventHub: Campus Event Management & Registration Platform
 
-> B.Tech Computer Science and Engineering (Data Science)
+> B.Tech Computer Science and Engineering (Data Science)<br>
 > Mar Athanasius College of Engineering (MACE)
 
 A full-stack campus event management and registration platform built with **Node.js, Express, and MongoDB Atlas**. The system handles institutional governance, multi-tier approvals, role-based workflows, automated queue management, digital ticketing, Razorpay payment processing, Google calendar synchronization, and Gemini AI integration.
 
 ---
 
-## 🏛️ System Architecture & Workflow
+## System Architecture & Workflow
 
 MACE EventHub implements a decentralized governance model that mirrors collegiate administration:
 
@@ -38,7 +38,7 @@ MACE EventHub implements a decentralized governance model that mirrors collegiat
 
 ---
 
-## 🚀 Key Engineering Features
+## Key Engineering Features
 
 ### 1. Multi-Tier Institutional Governance
 - **Role-Based Access Control (RBAC):** Distinct roles for `student`, `faculty_advisor`, `principal`, and `admin` with secure JWT authentication and role-guarding middleware.
@@ -71,7 +71,7 @@ MACE EventHub implements a decentralized governance model that mirrors collegiat
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 | Layer | Technologies |
 |---|---|
@@ -87,7 +87,7 @@ MACE EventHub implements a decentralized governance model that mirrors collegiat
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 Web Programming/
@@ -151,7 +151,7 @@ Web Programming/
 
 ---
 
-## ⚡ Setup & Installation
+## Setup & Installation
 
 ### 1. Prerequisites
 - **Node.js**: v18.0.0 or higher
@@ -219,7 +219,7 @@ The server will bind to `http://localhost:3000`.
 
 ---
 
-## 🔌 API Reference
+## API Reference
 
 ### Authentication & Users (`/api/auth`)
 | Method | Endpoint | Access | Description |
@@ -298,7 +298,7 @@ The server will bind to `http://localhost:3000`.
 
 ---
 
-## 📜 Academic Attribution
+## Academic Attribution
 
 Developed as a prototype for:
 **Mar Athanasius College of Engineering (MACE), Kothamangalam**
