@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Your MACE FestHub profile — manage registrations, update details, and propose or approve events." />
-  <title>My Profile — MACE FestHub</title>
+  <meta name="description" content="Your MACE EventHub profile — manage registrations, update details, and propose or approve events." />
+  <title>My Profile — MACE EventHub</title>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -14,7 +14,7 @@
     <div class="navbar-inner">
       <a href="/" class="nav-logo">
         <span class="logo-icon">⚡</span>
-        MACE FestHub
+        MACE EventHub
       </a>
       <div class="nav-links" id="nav-links">
         <a href="/" id="nav-home">Events</a>
@@ -37,6 +37,18 @@
         <span class="sidebar-icon">👤</span> Manage Profile
       </button>
 
+      <!-- Shown only to students — apply for club officer role -->
+      <div id="apply-officer-section" style="display:none;">
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-title" style="margin-top:8px;">Club Membership</div>
+        <button class="sidebar-btn" data-panel="apply-officer" id="sb-apply-officer">
+          <span class="sidebar-icon">🏅</span> Apply as Club Officer
+        </button>
+        <button class="sidebar-btn" data-panel="my-officer-requests" id="sb-my-officer-req">
+          <span class="sidebar-icon">📄</span> My Applications
+        </button>
+      </div>
+
       <!-- Shown only to club officers (president / secretary) -->
       <div id="officer-section" style="display:none;">
         <div class="sidebar-divider"></div>
@@ -53,6 +65,10 @@
       <div id="approver-section" style="display:none;">
         <div class="sidebar-divider"></div>
         <div class="sidebar-title" style="margin-top:8px;">Approvals</div>
+        <button class="sidebar-btn" data-panel="officer-applications" id="sb-officer-apps">
+          <span class="sidebar-icon">🏅</span> Officer Applications
+          <span class="badge-count" id="officer-apps-badge" style="display:none;"></span>
+        </button>
         <button class="sidebar-btn" data-panel="pending-approvals" id="sb-pending">
           <span class="sidebar-icon">⏳</span> Pending Approvals
           <span class="badge-count" id="pending-badge" style="display:none;"></span>
@@ -143,6 +159,21 @@
                   <label for="pf-phone">Phone</label>
                   <input type="tel" id="pf-phone" placeholder="+91 XXXXX XXXXX" />
                 </div>
+
+                <!-- Student Interests / Tracks -->
+                <div class="form-group full" id="pf-interests-group">
+                  <label>
+                    Interested Tracks &amp; Themes
+                    <span style="color:var(--t3); font-size:.85em;">(Instant email notifications when matching events are published)</span>
+                  </label>
+                  <div class="tag-selector-wrap" id="pf-tag-selector">
+                    <div class="tag-chips-container" id="pf-tag-chips" style="margin-bottom:8px;"></div>
+                    <div class="tag-input-row" style="display:flex; gap:8px;">
+                      <input type="text" id="pf-new-tag-input" placeholder="Add custom track (e.g. AI & Robotics)" style="flex:1;" />
+                      <button type="button" class="btn btn-outline btn-sm" id="btn-add-pf-tag">+ Add Track</button>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="form-actions" style="margin-top:20px;">
                 <button type="submit" class="btn btn-primary" id="save-profile-btn">
@@ -187,10 +218,12 @@
       <section class="admin-section" id="panel-propose-event">
         <div class="section-header">
           <h1 class="section-title">Propose an Event</h1>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+          <p style="color:var(--t2); margin:0;">
+            Submit an event proposal for your club. It will be reviewed by your Faculty Advisor, then the Principal.
+          </p>
+          <button type="button" class="btn btn-sm btn-outline" id="demo-fill-proposal" style="font-size:0.78rem;">⚡ Demo Fill: RoboWars 2026</button>
         </div>
-        <p style="color:var(--t2); margin-bottom:20px;">
-          Submit an event proposal for your club. It will be reviewed by your Faculty Advisor, then the Principal. Once approved, the event appears on the events page automatically.
-        </p>
         <div class="panel">
           <div class="panel-body">
             <form id="proposal-form" novalidate>
@@ -210,6 +243,24 @@
                 <div class="form-group full">
                   <label for="prop-desc">Description</label>
                   <textarea id="prop-desc" rows="3" placeholder="Brief description of the event…"></textarea>
+                </div>
+
+                <!-- Event Tracks / Themes (Tags) & AI Tag Suggester -->
+                <div class="form-group full">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
+                    <label style="margin-bottom:0;">
+                      Event Tracks &amp; Themes (Tags) *
+                      <span style="color:var(--t3); font-size:.85em;">(Matching students get notified via email)</span>
+                    </label>
+                    <button type="button" class="btn btn-sm btn-ai-glow" id="btn-ai-suggest-tags" style="display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;">
+                      <span id="ai-btn-text">✨ Gemini: Suggest Tags &amp; Polish</span>
+                    </button>
+                  </div>
+                  <div class="tag-chips-container" id="prop-tag-chips" style="margin-bottom:8px;"></div>
+                  <div class="tag-input-row" style="display:flex; gap:8px;">
+                    <input type="text" id="prop-new-tag-input" placeholder="Create or add new tag (e.g. Autonomous Drones, Cyber Security)" style="flex:1;" />
+                    <button type="button" class="btn btn-outline btn-sm" id="btn-add-prop-tag">+ Add Tag</button>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label for="prop-date">Proposed Date *</label>
@@ -238,6 +289,10 @@
                   <input type="number" id="prop-capacity" placeholder="50" min="1" required />
                   <span class="field-error" id="err-prop-cap" role="alert"></span>
                 </div>
+                <div class="form-group">
+                  <label for="prop-fee">Registration Fee (₹)</label>
+                  <input type="number" id="prop-fee" placeholder="0 (Free)" min="0" value="0" />
+                </div>
               </div>
               <div class="form-actions" style="margin-top:20px;">
                 <button type="submit" class="btn btn-primary" id="submit-proposal-btn">
@@ -263,6 +318,97 @@
           <p>Use the <strong>Propose Event</strong> tab to submit your first event proposal.</p>
         </div>
         <div id="my-proposals-list" style="display:none;"></div>
+      </section>
+
+      <!-- ── Apply as Club Officer (Students only) ─────────────── -->
+      <section class="admin-section" id="panel-apply-officer">
+        <div class="section-header">
+          <h1 class="section-title">Apply as Club Officer</h1>
+        </div>
+        <div class="panel">
+          <div class="panel-body">
+            <p style="color:var(--t2); margin-bottom:20px; font-size:.9rem; line-height:1.5;">
+              Apply to become the <strong>President</strong> or <strong>Secretary</strong> of a club.
+              Your application will be reviewed by the club's Faculty Advisor.
+              Once approved, you'll gain access to propose events for your club.
+            </p>
+            <form id="officer-apply-form" novalidate>
+              <div class="admin-form">
+                <div class="form-group full">
+                  <label for="oa-club">Club *</label>
+                  <select id="oa-club" required>
+                    <option value="">Loading clubs…</option>
+                  </select>
+                  <span class="field-error" id="err-oa-club" role="alert"></span>
+                  <small id="oa-fa-note" style="color:var(--t3); font-size:.78rem; margin-top:4px; display:block;"></small>
+                </div>
+                <div class="form-group full">
+                  <label for="oa-role">Role Applying For *</label>
+                  <select id="oa-role" required>
+                    <option value="">Select a role…</option>
+                    <option value="president">🏆 Club President</option>
+                    <option value="secretary">📝 Club Secretary</option>
+                  </select>
+                  <span class="field-error" id="err-oa-role" role="alert"></span>
+                </div>
+                <div class="form-group full">
+                  <label for="oa-statement">
+                    Motivation Statement *
+                    <span style="color:var(--t3); font-size:.85em;">(Tell the FA why you should hold this position)</span>
+                  </label>
+                  <textarea id="oa-statement" rows="4" placeholder="e.g. I have been an active member for 2 years, organised 3 workshops, and am passionate about growing this club's reach…" required></textarea>
+                  <span class="field-error" id="err-oa-statement" role="alert"></span>
+                </div>
+              </div>
+              <div class="form-actions" style="margin-top:20px;">
+                <button type="submit" class="btn btn-primary" id="submit-officer-btn">
+                  <span id="submit-officer-text">Submit Application</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── My Officer Applications (Students only) ────────────── -->
+      <section class="admin-section" id="panel-my-officer-requests">
+        <div class="section-header">
+          <h1 class="section-title">My Club Officer Applications</h1>
+        </div>
+        <div id="my-officer-req-loading" class="loading-state">
+          <div class="spinner"></div><p>Loading your applications…</p>
+        </div>
+        <div id="my-officer-req-empty" class="empty-state" style="display:none;">
+          <div class="empty-icon">🏅</div>
+          <h3>No applications yet</h3>
+          <p>Use the <strong>Apply as Club Officer</strong> tab to submit your first application.</p>
+        </div>
+        <div id="my-officer-req-list" style="display:none;"></div>
+      </section>
+
+      <!-- ── Officer Applications (FA reviews — in Approvals section) ─── -->
+      <section class="admin-section" id="panel-officer-applications">
+        <div class="section-header">
+          <h1 class="section-title">Officer Applications</h1>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <select id="officer-apps-filter" style="background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); padding:6px 10px; color:var(--t1); font-size:.8rem; outline:none;">
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="all">All</option>
+            </select>
+            <button class="btn btn-outline btn-sm" id="officer-apps-refresh-btn">↻ Refresh</button>
+          </div>
+        </div>
+        <div id="officer-apps-loading" class="loading-state">
+          <div class="spinner"></div><p>Loading applications…</p>
+        </div>
+        <div id="officer-apps-empty" class="empty-state" style="display:none;">
+          <div class="empty-icon">✅</div>
+          <h3>No applications</h3>
+          <p>No officer applications in this category.</p>
+        </div>
+        <div id="officer-apps-list" style="display:none;"></div>
       </section>
 
       <!-- ── Pending Approvals ──────────────────────────────── -->
@@ -321,11 +467,26 @@
           </div>
         </div>
 
-        <!-- Club FA Assignment -->
+        <!-- Club Management -->
         <div class="panel">
           <div class="panel-header">
-            <span>🏛️ Club Faculty Advisor Assignment</span>
+            <span>🏛️ Club Management</span>
             <button class="btn btn-outline btn-sm" id="reload-clubs-btn">↻ Refresh</button>
+          </div>
+          <!-- Create Club sub-form -->
+          <div class="panel-body" style="border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:4px;">
+            <div style="font-weight:600; font-size:.9rem; margin-bottom:10px; color:var(--t1);">➕ Add New Club</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+              <div style="flex:2; min-width:160px;">
+                <label for="new-club-name" style="font-size:.8rem; color:var(--t2);">Club Name *</label>
+                <input type="text" id="new-club-name" placeholder="e.g. Robotics Society" style="width:100%;" />
+              </div>
+              <div style="flex:3; min-width:180px;">
+                <label for="new-club-desc" style="font-size:.8rem; color:var(--t2);">Description</label>
+                <input type="text" id="new-club-desc" placeholder="Optional description" style="width:100%;" />
+              </div>
+              <button class="btn btn-primary btn-sm" id="create-club-btn" style="align-self:flex-end;">Create Club</button>
+            </div>
           </div>
           <div class="panel-body" style="padding:0; overflow-x:auto;">
             <div id="clubs-loading" style="padding:20px; text-align:center; color:var(--t2);">Loading clubs…</div>

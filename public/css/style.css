@@ -818,3 +818,284 @@ input.email-faculty { border-color: rgba(34,197,94,.4) !important; }
   .navbar-inner { padding: 0 16px; }
   .auth-card { padding: 24px 18px; }
 }
+
+/* ─── Tags & Tracks UI ──────────────────────────────────────────────── */
+.tag-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 38px;
+  align-items: center;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--t2);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+.tag-chip:hover {
+  border-color: var(--primary-lt);
+  color: var(--t1);
+  transform: translateY(-1px);
+}
+.tag-chip.active {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(79, 70, 229, 0.25));
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.3);
+}
+.tag-chip .tag-remove {
+  font-size: 1.1em;
+  line-height: 1;
+  opacity: 0.7;
+}
+.tag-chip .tag-remove:hover {
+  opacity: 1;
+}
+
+/* Track Quick Filter Bar on index.html */
+.track-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 16px 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  scrollbar-width: thin;
+}
+.track-filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.track-pill {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.78rem;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--t2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.track-pill:hover, .track-pill.active {
+  background: var(--primary-dim);
+  border-color: var(--primary);
+  color: var(--primary-h);
+}
+
+/* ─── EventBot / FestBot Floating Widget ───────────────────────────────── */
+.eventbot-float-btn, .festbot-float-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.88rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4), 0 0 16px rgba(79, 70, 229, 0.3);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.eventbot-float-btn:hover, .festbot-float-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.55), 0 0 24px rgba(124, 58, 237, 0.5);
+}
+.eventbot-float-btn .bot-sparkle, .festbot-float-btn .bot-sparkle {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px #fff); }
+  50% { transform: scale(1.2); filter: drop-shadow(0 0 6px #a78bfa); }
+}
+
+.eventbot-modal, .festbot-modal {
+  position: fixed;
+  bottom: 84px;
+  right: 24px;
+  width: 370px;
+  max-width: calc(100vw - 32px);
+  height: 520px;
+  max-height: calc(100vh - 120px);
+  background: rgba(18, 18, 26, 0.96);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(124, 58, 237, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+  animation: modal-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modal-enter {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.eventbot-header, .festbot-header {
+  padding: 14px 18px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(79, 70, 229, 0.1));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.eventbot-title, .festbot-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #fff;
+}
+.eventbot-badge, .festbot-badge {
+  font-size: 0.68rem;
+  background: rgba(124, 58, 237, 0.3);
+  color: #c4b5fd;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.eventbot-close, .festbot-close {
+  background: transparent;
+  border: none;
+  color: var(--t2);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+.eventbot-messages, .festbot-messages {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.eventbot-msg, .festbot-msg {
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+.eventbot-msg.bot, .festbot-msg.bot {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--t1);
+  border-bottom-left-radius: 4px;
+}
+.eventbot-msg.bot strong, .festbot-msg.bot strong {
+  color: #fff;
+  font-weight: 700;
+}
+.eventbot-msg.bot em, .festbot-msg.bot em {
+  color: #c4b5fd;
+  font-style: normal;
+  font-weight: 600;
+}
+.eventbot-msg.bot ul, .festbot-msg.bot ul {
+  margin: 6px 0 8px;
+  padding-left: 18px;
+  list-style-type: disc;
+}
+.eventbot-msg.bot li, .festbot-msg.bot li {
+  margin-bottom: 5px;
+  line-height: 1.45;
+}
+.eventbot-msg.bot p, .festbot-msg.bot p {
+  margin: 4px 0 6px;
+  line-height: 1.45;
+}
+.eventbot-msg.user, .festbot-msg.user {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.eventbot-input-area, .festbot-input-area {
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  gap: 8px;
+  background: rgba(10, 10, 15, 0.6);
+}
+.eventbot-input, .festbot-input {
+  flex: 1;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 14px;
+  color: var(--t1);
+  font-size: 0.84rem;
+}
+.eventbot-input:focus, .festbot-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.eventbot-send-btn, .festbot-send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.eventbot-quick-chips, .festbot-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.eventbot-quick-chip, .festbot-quick-chip {
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(124, 58, 237, 0.15);
+  color: #c4b5fd;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  cursor: pointer;
+}
+.eventbot-quick-chip:hover, .festbot-quick-chip:hover {
+  background: rgba(124, 58, 237, 0.3);
+}
+
+/* AI polish button with gradient glow */
+.btn-ai-glow {
+  background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(236,72,153,0.15));
+  border: 1px solid rgba(236,72,153,0.4);
+  color: #f472b6;
+  transition: all 0.25s ease;
+}
+.btn-ai-glow:hover {
+  background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(236,72,153,0.3));
+  box-shadow: 0 0 12px rgba(236,72,153,0.3);
+  color: #fff;
+}

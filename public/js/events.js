@@ -7,6 +7,7 @@ const API = '';  // Same origin; Express serves these files
 // ── State ────────────────────────────────────────────────────────────
 let allEvents = [];
 let activeFilter = 'all';
+let activeTrack = 'all';
 
 // ── DOM refs ──────────────────────────────────────────────────────────
 const grid       = document.getElementById('events-grid');
@@ -79,6 +80,11 @@ function renderCards(events) {
           </div>
           <h2 class="card-title">${ev.name}</h2>
           ${ev.description ? `<p class="card-desc">${ev.description}</p>` : ''}
+          ${ev.tags && ev.tags.length ? `
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin: 8px 0 10px;">
+              ${ev.tags.map(t => `<span class="tag-badge" style="background:rgba(124,58,237,0.15); color:#c4b5fd; font-size:0.72rem; padding:2px 8px; border-radius:12px; border:1px solid rgba(139,92,246,0.25);">#${t}</span>`).join('')}
+            </div>
+          ` : ''}
           <div class="card-meta">
             <div class="card-meta-item"><span class="icon">📅</span>${formatDate(ev.date)}</div>
             <div class="card-meta-item"><span class="icon">📍</span>${ev.venue || 'TBD'}</div>
@@ -132,9 +138,13 @@ async function fetchEvents() {
 
 // ── Filter ────────────────────────────────────────────────────────────
 function applyFilter() {
-    const filtered = activeFilter === 'all'
-        ? allEvents
-        : allEvents.filter(e => e.category === activeFilter);
+    let filtered = allEvents;
+    if (activeFilter !== 'all') {
+        filtered = filtered.filter(e => e.category === activeFilter);
+    }
+    if (activeTrack !== 'all') {
+        filtered = filtered.filter(e => (e.tags || []).some(t => t.toLowerCase() === activeTrack.toLowerCase()));
+    }
     renderCards(filtered);
 }
 
@@ -146,6 +156,31 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
         applyFilter();
     });
 });
+
+async function loadTrackFilter() {
+    const bar = document.getElementById('track-filter-bar');
+    if (!bar) return;
+    try {
+        const res = await fetch(`${API}/api/tags`);
+        const tags = await res.json();
+        if (!tags.length) return;
+
+        bar.innerHTML = `<span class="track-filter-label">Tracks:</span>
+            <button class="track-pill ${activeTrack === 'all' ? 'active' : ''}" data-track="all">All Tracks</button>` +
+            tags.map(t => `<button class="track-pill ${activeTrack.toLowerCase() === t.name.toLowerCase() ? 'active' : ''}" data-track="${t.name}">#${t.name}</button>`).join('');
+
+        bar.querySelectorAll('.track-pill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                bar.querySelectorAll('.track-pill').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeTrack = btn.dataset.track;
+                applyFilter();
+            });
+        });
+    } catch (e) {
+        console.warn('Failed to load track filter:', e);
+    }
+}
 
 // ── Modal open ────────────────────────────────────────────────────────
 window.openModal = function openModal(eventId) {
@@ -160,12 +195,41 @@ window.openModal = function openModal(eventId) {
         : `📅 ${formatDate(ev.date)}  ·  ${ev.capacity - ev.confirmedCount} seats available`;
     document.getElementById('reg-btn-text').textContent = isFull ? 'Join Waitlist' : 'Register Now';
 
-    const user = getUser();
+    const user         = getUser();
     const formFields   = document.getElementById('reg-form-fields');
     const loginPrompt  = document.getElementById('login-prompt');
     const loggedInStrip = document.getElementById('logged-in-strip');
+    const roleNotice   = document.getElementById('role-restricted-notice');
+    const submitBtn    = document.getElementById('reg-submit-btn');
+    const cancelBtn    = document.getElementById('modal-cancel-btn');
 
-    if (user) {
+    if (user && user.role !== 'student') {
+        // Non-student accounts (Principal, Faculty Advisor, Admin) cannot register
+        const roleLabels = {
+            faculty_advisor: 'Faculty Advisor',
+            principal: 'Principal',
+            admin: 'Administrator'
+        };
+        const label = roleLabels[user.role] || user.role;
+        loginPrompt.style.display   = 'none';
+        loggedInStrip.style.display = 'block';
+        document.getElementById('strip-name').textContent  = `${user.name} (${label})`;
+        document.getElementById('strip-email').textContent = user.email;
+
+        if (roleNotice) {
+            roleNotice.style.display = 'block';
+            document.getElementById('role-notice-text').innerHTML =
+                `You are currently logged in with a supervisory account (<strong>${label}</strong>).<br>Event participation is open to students only. To oversee approvals and clubs, visit your <a href="/profile.html" style="color:var(--primary-h); font-weight:600;">Dashboard</a>.`;
+        }
+        formFields.style.display = 'none';
+        submitBtn.style.display  = 'none';
+        cancelBtn.textContent    = 'Close';
+    } else if (user) {
+        if (roleNotice) roleNotice.style.display = 'none';
+        formFields.style.display = 'grid';
+        submitBtn.style.display  = 'inline-flex';
+        cancelBtn.textContent    = 'Cancel';
+
         // Logged-in: show strip, collapse non-essential fields, pre-fill
         loginPrompt.style.display   = 'none';
         loggedInStrip.style.display = 'block';
@@ -185,6 +249,11 @@ window.openModal = function openModal(eventId) {
             document.getElementById('reg-year').value = user.year;
         }
     } else {
+        if (roleNotice) roleNotice.style.display = 'none';
+        formFields.style.display = 'grid';
+        submitBtn.style.display  = 'inline-flex';
+        cancelBtn.textContent    = 'Cancel';
+
         // Guest: show login prompt, show full form
         loginPrompt.style.display   = 'block';
         loggedInStrip.style.display = 'none';
@@ -202,9 +271,11 @@ window.openModal = function openModal(eventId) {
     resultView.style.display = 'none';
     modal.style.display      = 'flex';
 
-    // Focus first editable field
-    const firstInput = document.getElementById(user ? 'reg-phone' : 'reg-name');
-    if (firstInput && !firstInput.disabled) firstInput.focus();
+    // Focus first editable field if student
+    if (!user || user.role === 'student') {
+        const firstInput = document.getElementById(user ? 'reg-phone' : 'reg-name');
+        if (firstInput && !firstInput.disabled) firstInput.focus();
+    }
 };
 
 function closeModal() {
@@ -214,6 +285,9 @@ function closeModal() {
         const el = document.getElementById(id);
         if (el) el.disabled = false;
     });
+    document.getElementById('reg-form-fields').style.display = 'grid';
+    document.getElementById('reg-submit-btn').style.display  = 'inline-flex';
+    document.getElementById('modal-cancel-btn').textContent = 'Cancel';
     fetchEvents(); // Refresh seat counts
 }
 
@@ -285,7 +359,7 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
                 key: data.key_id,
                 amount: data.amount,
                 currency: data.currency,
-                name: "MACE FestHub",
+                name: "MACE EventHub",
                 description: `Payment for ${document.getElementById('modal-title').textContent}`,
                 order_id: data.order_id,
                 handler: async function (response) {
@@ -379,6 +453,156 @@ function handleRegistrationSuccess(data, payload) {
         document.getElementById('reg-btn-text').textContent = 'Register Now';
     }
 }
+
+// ─── EventBot AI Campus Assistant ──────────────────────────────────────────
+const eventbotModal    = document.getElementById('eventbot-modal') || document.getElementById('festbot-modal');
+const eventbotOpenBtn  = document.getElementById('eventbot-open-btn') || document.getElementById('festbot-open-btn');
+const eventbotCloseBtn = document.getElementById('eventbot-close-btn') || document.getElementById('festbot-close-btn');
+const eventbotForm     = document.getElementById('eventbot-form') || document.getElementById('festbot-form');
+const eventbotInput    = document.getElementById('eventbot-input') || document.getElementById('festbot-input');
+const eventbotMessages = document.getElementById('eventbot-messages') || document.getElementById('festbot-messages');
+
+let eventbotHistory = [];
+
+/**
+ * Clean markdown-to-HTML parser that converts markdown asterisks, bolding,
+ * italics, and list items into clean, beautiful HTML elements without raw stars.
+ */
+function formatBotMarkdown(text) {
+    if (!text) return '';
+    let raw = String(text).replace(/\r\n/g, '\n');
+
+    // 1. Normalize inline chained bullets: e.g. ' * **' or ' * *' or ' * Event'
+    // Converts inline asterisks used as delimiters into clean newline bullets
+    let normalized = raw.replace(/([^\n])\s+\*\s+(\*\*|\*|[A-Z0-9\u00a9-\uFFFF])/g, '$1\n* $2');
+
+    // 2. Escape HTML entities
+    let clean = normalized
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // 3. Headers: ### Header -> <h4>, ## Header -> <h3>
+    clean = clean.replace(/^### (.*$)/gim, '<h4 style="margin:8px 0 4px;font-size:0.92rem;font-weight:700;color:#c4b5fd;">$1</h4>');
+    clean = clean.replace(/^## (.*$)/gim, '<h3 style="margin:10px 0 4px;font-size:0.96rem;font-weight:700;color:#c4b5fd;">$1</h3>');
+
+    // 4. Bold: **text** or __text__
+    clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    clean = clean.replace(/__(.*?)__/g, '<strong>$1</strong>');
+
+    // 5. Italic: *text* (must not start or end with whitespace)
+    clean = clean.replace(/(^|[^\*])\*([^\*\s][^\*\n]*?[^\*\s]|[^\*\s])\*([^\*]|$)/g, '$1<em>$2</em>$3');
+
+    // 6. Inline code: `code`
+    clean = clean.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.12);padding:2px 5px;border-radius:4px;font-size:0.85em;">$1</code>');
+
+    // 7. Process lines into paragraphs and list items
+    const lines = clean.split('\n');
+    let out = [];
+    let inList = false;
+
+    for (let line of lines) {
+        let trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Check if line starts with a list bullet marker
+        const bulletMatch = trimmed.match(/^[\*\-\•]\s+(.*)$/);
+        if (bulletMatch) {
+            if (!inList) {
+                out.push('<ul style="margin:6px 0 8px; padding-left:18px; list-style-type:disc;">');
+                inList = true;
+            }
+            let itemText = bulletMatch[1].trim();
+            itemText = itemText.replace(/(^|[^\*])\*([^\*\s][^\*\n]*?[^\*\s]|[^\*\s])\*([^\*]|$)/g, '$1<em>$2</em>$3');
+            itemText = itemText.replace(/\s\*\s/g, ' &bull; ').replace(/\*/g, '');
+            out.push(`<li style="margin-bottom:5px; line-height:1.45;">${itemText}</li>`);
+        } else {
+            if (inList) {
+                out.push('</ul>');
+                inList = false;
+            }
+            let itemText = trimmed;
+            itemText = itemText.replace(/(^|[^\*])\*([^\*\s][^\*\n]*?[^\*\s]|[^\*\s])\*([^\*]|$)/g, '$1<em>$2</em>$3');
+            itemText = itemText.replace(/\s\*\s/g, ' &bull; ').replace(/\*/g, '');
+            out.push(`<p style="margin:4px 0 6px; line-height:1.45;">${itemText}</p>`);
+        }
+    }
+    if (inList) out.push('</ul>');
+
+    let result = out.join('');
+    // Absolute guarantee: no stray raw asterisks remain anywhere in the rendered HTML
+    result = result.replace(/\*/g, '');
+    return result;
+}
+
+function appendEventbotMessage(text, role) {
+    if (!eventbotMessages) return null;
+    const msg = document.createElement('div');
+    msg.className = `eventbot-msg festbot-msg ${role}`;
+    if (role === 'bot') {
+        msg.innerHTML = formatBotMarkdown(text);
+    } else {
+        msg.textContent = text;
+    }
+    eventbotMessages.appendChild(msg);
+    eventbotMessages.scrollTop = eventbotMessages.scrollHeight;
+    return msg;
+}
+
+async function handleEventbotQuestion(question) {
+    appendEventbotMessage(question, 'user');
+    const loadingMsg = appendEventbotMessage('Thinking… 💭', 'bot');
+
+    try {
+        const res = await fetch(`${API}/api/ai/event-bot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, history: eventbotHistory })
+        });
+        const data = await res.json();
+        loadingMsg?.remove();
+
+        if (!res.ok) {
+            appendEventbotMessage(data.error || 'Sorry, I hit a snag answering that.', 'bot');
+            return;
+        }
+
+        appendEventbotMessage(data.answer, 'bot');
+        eventbotHistory.push({ role: 'user', content: question });
+        eventbotHistory.push({ role: 'assistant', content: data.answer });
+    } catch {
+        loadingMsg?.remove();
+        appendEventbotMessage('Network error. Please try asking again.', 'bot');
+    }
+}
+
+if (eventbotOpenBtn && eventbotModal) {
+    eventbotOpenBtn.addEventListener('click', () => {
+        const isHidden = eventbotModal.style.display === 'none';
+        eventbotModal.style.display = isHidden ? 'flex' : 'none';
+        if (isHidden) eventbotInput?.focus();
+    });
+    eventbotCloseBtn?.addEventListener('click', () => {
+        eventbotModal.style.display = 'none';
+    });
+
+    document.querySelectorAll('.eventbot-quick-chip, .festbot-quick-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const q = chip.dataset.q;
+            if (q) handleEventbotQuestion(q);
+        });
+    });
+
+    eventbotForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = eventbotInput.value.trim();
+        if (!text) return;
+        eventbotInput.value = '';
+        handleEventbotQuestion(text);
+    });
+}
+
 // ── Init ───────────────────────────────────────────────────────────────
 renderNavAuth();
 fetchEvents();
+loadTrackFilter();

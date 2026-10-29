@@ -58,20 +58,28 @@ function switchPanel(panelId) {
     document.getElementById(`panel-${panelId}`)?.classList.add('active');
 
     // Load data for each panel
-    if (panelId === 'my-registrations')  loadMyRegistrations();
-    if (panelId === 'manage-profile')    loadProfile();
-    if (panelId === 'propose-event')     loadMyClubsForProposal();
-    if (panelId === 'my-proposals')      loadMyProposals();
-    if (panelId === 'pending-approvals') loadPendingApprovals();
-    if (panelId === 'manage-users')      loadUserManagement();
-    if (panelId === 'inbox')             loadInbox();
+    if (panelId === 'my-registrations')    loadMyRegistrations();
+    if (panelId === 'manage-profile')      loadProfile();
+    if (panelId === 'propose-event')       loadMyClubsForProposal();
+    if (panelId === 'my-proposals')        loadMyProposals();
+    if (panelId === 'pending-approvals')   loadPendingApprovals();
+    if (panelId === 'manage-users')        loadUserManagement();
+    if (panelId === 'inbox')               loadInbox();
+    if (panelId === 'apply-officer')       loadClubsForOfficerApply();
+    if (panelId === 'my-officer-requests') loadMyOfficerRequests();
+    if (panelId === 'officer-applications') loadOfficerApplications();
 }
 
 // ── Show/hide sidebar sections based on user role ────────────────────────────────
 function configureSidebar(user) {
-    if (['admin'].includes(user.role)) {
-        document.getElementById('officer-section').style.display = 'block';
+    // Students can apply to become club officers
+    if (user.role === 'student') {
+        document.getElementById('apply-officer-section').style.display = 'block';
     }
+    // Officer section (Propose Event + My Proposals) is ONLY shown to club presidents/secretaries
+    // — dynamically revealed by checkOfficerStatus() via /api/clubs/my
+    // DO NOT show it here for faculty_advisor: FA approves, they do not propose
+
     if (['faculty_advisor', 'principal', 'admin'].includes(user.role)) {
         document.getElementById('approver-section').style.display = 'block';
     }
@@ -134,7 +142,7 @@ async function loadMyRegistrations() {
                   <span>🎫</span> Show QR Code
                 </button>
                 <div class="qr-expand" id="qr-expand-${r._id}" style="display:none;">
-                  <img src="/api/tickets/${r._id}/qr.png"
+                  <img src="/api/tickets/${r._id}/qr.png?token=${getToken()}"
                        alt="Entry QR Code"
                        class="ticket-qr"
                        loading="lazy"
@@ -144,7 +152,7 @@ async function loadMyRegistrations() {
                     <div class="ticket-id-value">${r.ticketToken}</div>
                   </div>
                 </div>
-                <a href="/api/tickets/${r._id}/pdf"
+                <a href="/api/tickets/${r._id}/pdf?token=${getToken()}"
                    target="_blank"
                    class="btn btn-outline btn-sm"
                    style="color:var(--primary-h); border-color:rgba(124,58,237,.35);">
@@ -224,6 +232,67 @@ window.toggleQR = function(regId) {
 };
 
 // ── Manage Profile ──────────────────────────────────────────────────
+let profileInterests = new Set();
+async function initProfileInterests(initial) {
+    profileInterests = new Set(initial || []);
+    const chipsEl = document.getElementById('pf-tag-chips');
+    if (!chipsEl) return;
+
+    try {
+        const res = await fetch(`${API}/api/tags`);
+        const allTags = await res.json();
+        const tagNames = Array.from(new Set([
+            ...allTags.map(t => t.name),
+            ...profileInterests
+        ]));
+
+        chipsEl.innerHTML = tagNames.map(name => {
+            const active = profileInterests.has(name);
+            return `<span class="tag-chip ${active ? 'active' : ''}" data-tag="${name}">
+                ${active ? '✓' : '+'} ${name}
+            </span>`;
+        }).join('');
+
+        chipsEl.querySelectorAll('.tag-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const tag = chip.dataset.tag;
+                if (profileInterests.has(tag)) {
+                    profileInterests.delete(tag);
+                    chip.classList.remove('active');
+                    chip.textContent = `+ ${tag}`;
+                } else {
+                    profileInterests.add(tag);
+                    chip.classList.add('active');
+                    chip.textContent = `✓ ${tag}`;
+                }
+            });
+        });
+    } catch (e) {
+        console.warn('Failed to load profile tags:', e);
+    }
+}
+
+const btnAddPfTag = document.getElementById('btn-add-pf-tag');
+const pfNewTagInput = document.getElementById('pf-new-tag-input');
+if (btnAddPfTag && pfNewTagInput) {
+    const addFn = () => {
+        const val = pfNewTagInput.value.trim();
+        if (!val) return;
+        profileInterests.add(val);
+        pfNewTagInput.value = '';
+        fetch(`${API}/api/tags`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ name: val })
+        }).catch(() => {});
+        initProfileInterests(Array.from(profileInterests));
+    };
+    btnAddPfTag.addEventListener('click', addFn);
+    pfNewTagInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); addFn(); }
+    });
+}
+
 function loadProfile() {
     const u = currentUser;
     document.getElementById('pf-name').value  = u.name        || '';
@@ -241,14 +310,17 @@ function loadProfile() {
     document.getElementById('profile-role-badge').innerHTML =
         `<span class="pill ${rl.cls}" style="font-size:.8rem;">${rl.label}</span>`;
 
-    // Student-only fields: dept and year
+    // Student-only fields: dept, year, interests
     const isStudent = u.role === 'student';
     document.getElementById('pf-dept-group').style.display = isStudent ? '' : 'none';
     document.getElementById('pf-year-group').style.display = isStudent ? '' : 'none';
+    const pfInterests = document.getElementById('pf-interests-group');
+    if (pfInterests) pfInterests.style.display = isStudent ? '' : 'none';
 
     if (isStudent) {
         document.getElementById('pf-dept').value = u.department  || '';
         document.getElementById('pf-year').value = u.year        || 'N/A';
+        initProfileInterests(u.interests || []);
     }
 }
 
@@ -268,9 +340,10 @@ document.getElementById('profile-form').addEventListener('submit', async (e) => 
     text.textContent = 'Saving…';
 
     try {
+        const interests = Array.from(profileInterests);
         const res  = await fetch(`${API}/api/auth/me`, {
             method: 'PUT', headers: authHeaders(),
-            body: JSON.stringify({ name, department: dept, year, phone }),
+            body: JSON.stringify({ name, department: dept, year, phone, interests }),
         });
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Update failed', 'error'); return; }
@@ -318,7 +391,113 @@ document.getElementById('pw-form').addEventListener('submit', async (e) => {
 });
 
 // ── Propose Event ─────────────────────────────────────────────────────────────
+let proposalTags = new Set();
+async function initProposalTags() {
+    const chipsEl = document.getElementById('prop-tag-chips');
+    if (!chipsEl) return;
+    try {
+        const res = await fetch(`${API}/api/tags`);
+        const allTags = await res.json();
+        const tagNames = Array.from(new Set([
+            ...allTags.map(t => t.name),
+            ...proposalTags
+        ]));
+
+        chipsEl.innerHTML = tagNames.map(name => {
+            const active = proposalTags.has(name);
+            return `<span class="tag-chip ${active ? 'active' : ''}" data-tag="${name}">
+                ${active ? '✓' : '+'} ${name}
+            </span>`;
+        }).join('');
+
+        chipsEl.querySelectorAll('.tag-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const tag = chip.dataset.tag;
+                if (proposalTags.has(tag)) {
+                    proposalTags.delete(tag);
+                    chip.classList.remove('active');
+                    chip.textContent = `+ ${tag}`;
+                } else {
+                    proposalTags.add(tag);
+                    chip.classList.add('active');
+                    chip.textContent = `✓ ${tag}`;
+                }
+            });
+        });
+    } catch (e) {
+        console.warn('Failed to load proposal tags:', e);
+    }
+}
+
+const btnAddPropTag = document.getElementById('btn-add-prop-tag');
+const propNewTagInput = document.getElementById('prop-new-tag-input');
+if (btnAddPropTag && propNewTagInput) {
+    const addPropFn = () => {
+        const val = propNewTagInput.value.trim();
+        if (!val) return;
+        proposalTags.add(val);
+        propNewTagInput.value = '';
+        fetch(`${API}/api/tags`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ name: val })
+        }).catch(() => {});
+        initProposalTags();
+    };
+    btnAddPropTag.addEventListener('click', addPropFn);
+    propNewTagInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); addPropFn(); }
+    });
+}
+
+// Gemini AI Suggest Tags & Polish
+const btnAiSuggest = document.getElementById('btn-ai-suggest-tags');
+if (btnAiSuggest) {
+    btnAiSuggest.addEventListener('click', async () => {
+        const title = document.getElementById('prop-title').value.trim();
+        const desc = document.getElementById('prop-desc').value.trim();
+        const category = document.getElementById('prop-category').value;
+        const aiText = document.getElementById('ai-btn-text');
+
+        if (!title) {
+            showToast('Please enter an Event Title first so Gemini can analyze it.', 'warning');
+            document.getElementById('prop-title').focus();
+            return;
+        }
+
+        aiText.textContent = '✨ Gemini thinking…';
+        btnAiSuggest.disabled = true;
+
+        try {
+            const res = await fetch(`${API}/api/ai/suggest-tags`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ title, description: desc, category })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'AI suggestion failed');
+
+            if (data.enhancedDescription && (!desc || desc.length < data.enhancedDescription.length)) {
+                document.getElementById('prop-desc').value = data.enhancedDescription;
+            }
+
+            if (data.suggestedTags && data.suggestedTags.length > 0) {
+                data.suggestedTags.forEach(t => proposalTags.add(t));
+                initProposalTags();
+            }
+
+            showToast(`✨ Gemini suggested ${data.suggestedTags?.length || 0} tracks and polished your proposal!`, 'success');
+        } catch (err) {
+            showToast(`AI Assistant: ${err.message}`, 'error');
+        } finally {
+            aiText.textContent = '✨ Gemini: Suggest Tags & Polish';
+            btnAiSuggest.disabled = false;
+        }
+    });
+}
+
 async function loadMyClubsForProposal() {
+    initProposalTags();
     const clubSel = document.getElementById('prop-club');
     clubSel.innerHTML = '<option value="">Loading clubs…</option>';
 
@@ -354,6 +533,7 @@ document.getElementById('proposal-form').addEventListener('submit', async (e) =>
     const venue    = document.getElementById('prop-venue').value.trim();
     const category = document.getElementById('prop-category').value;
     const capacity = document.getElementById('prop-capacity').value;
+    const fee      = document.getElementById('prop-fee')?.value || 0;
 
     // Validate
     let valid = true;
@@ -373,13 +553,19 @@ document.getElementById('proposal-form').addEventListener('submit', async (e) =>
     text.textContent = 'Submitting…';
 
     try {
+        const tags = Array.from(proposalTags);
         const res  = await fetch(`${API}/api/proposals`, {
             method: 'POST', headers: authHeaders(),
-            body: JSON.stringify({ clubId, title, description: desc, date, time, venue, category, capacity: +capacity }),
+            body: JSON.stringify({
+                clubId, title, description: desc, date, time, venue, category,
+                capacity: +capacity, fee: +fee || 0, tags
+            }),
         });
         const data = await res.json();
         if (!res.ok) { showToast(data.error || 'Submission failed', 'error'); return; }
         document.getElementById('proposal-form').reset();
+        proposalTags.clear();
+        initProposalTags();
         showToast('Proposal submitted! Awaiting Faculty Advisor review.', 'success');
         switchPanel('my-proposals');
     } catch { showToast('Network error', 'error'); }
@@ -387,6 +573,28 @@ document.getElementById('proposal-form').addEventListener('submit', async (e) =>
         btn.disabled     = false;
         text.textContent = 'Submit Proposal';
     }
+});
+
+// ── Demo Quick Fill Proposal ──────────────────────────────────────────────────
+document.getElementById('demo-fill-proposal')?.addEventListener('click', () => {
+    const sel = document.getElementById('prop-club');
+    if (sel && sel.options.length) {
+        for (let opt of sel.options) {
+            if (opt.text.toLowerCase().includes('robotics')) { sel.value = opt.value; break; }
+        }
+    }
+    document.getElementById('prop-title').value = 'RoboWars 2026 Arena';
+    document.getElementById('prop-desc').value = 'National combat robotics tournament with ₹50,000 prize pool.';
+    document.getElementById('prop-date').value = '2026-10-15';
+    document.getElementById('prop-time').value = '10:00';
+    document.getElementById('prop-venue').value = 'Mechanical Workshop Hall';
+    if (document.getElementById('prop-category')) document.getElementById('prop-category').value = 'technical';
+    if (document.getElementById('prop-capacity')) document.getElementById('prop-capacity').value = '30';
+    document.getElementById('prop-fee').value = '100';
+    proposalTags.add('Robotics & Automation');
+    proposalTags.add('IoT & Embedded Systems');
+    initProposalTags();
+    showToast('RoboWars 2026 Arena details populated! ✨', 'success');
 });
 
 // ── My Proposals ──────────────────────────────────────────────────────────────
@@ -478,6 +686,11 @@ function renderProposalCard(p, showActions) {
         <span class="pill ${st.cls}">${st.label}</span>
       </div>
       ${p.description ? `<p style="color:var(--t2); margin:8px 0; font-size:.85em;">${p.description}</p>` : ''}
+      ${p.tags && p.tags.length ? `
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 10px;">
+          ${p.tags.map(t => `<span style="background:rgba(124,58,237,0.15); color:#c4b5fd; font-size:0.72rem; padding:2px 8px; border-radius:12px; border:1px solid rgba(139,92,246,0.25);">#${t}</span>`).join('')}
+        </div>
+      ` : ''}
       ${comments.join('')}
       ${p.createdEventId ? `<div class="proposal-comment" style="color:var(--green);">✓ Event created on the events page</div>` : ''}
       ${showActions ? `<div class="proposal-actions">${approveBtn}${rejectBtn}</div>` : ''}
@@ -509,18 +722,19 @@ window.openActionModal = function(proposalId, action) {
     document.getElementById('action-confirm-btn').className =
         `btn ${isApprove ? 'btn-primary' : 'btn-danger'}`;
     document.getElementById('action-confirm-btn').style.cssText = '';
-    actionCallback = () => submitAction(proposalId, action);
+    actionCallback = (comment) => submitAction(proposalId, action, comment);
     actionModal.style.display = 'flex';
     actionCommentEl.focus();
 };
 
 document.getElementById('action-confirm-btn').addEventListener('click', () => {
+    const cb = actionCallback;
+    const comment = actionCommentEl.value.trim();
     closeActionModal();
-    if (actionCallback) actionCallback();
+    if (cb) cb(comment);
 });
 
-async function submitAction(proposalId, action) {
-    const comment = actionCommentEl.value.trim();
+async function submitAction(proposalId, action, comment = '') {
     try {
         const res  = await fetch(`${API}/api/proposals/${proposalId}/${action}`, {
             method: 'PUT', headers: authHeaders(),
@@ -555,6 +769,21 @@ async function init() {
                     const badge = document.getElementById('pending-badge');
                     badge.textContent   = data.length;
                     badge.style.display = 'inline-block';
+                }
+            }).catch(() => {});
+    }
+
+    // Officer Applications badge (FA + Principal + Admin)
+    if (['faculty_advisor', 'principal', 'admin'].includes(currentUser.role)) {
+        fetch(`${API}/api/officer-requests/count`, { headers: authHeaders() })
+            .then(r => r.json())
+            .then(data => {
+                if (data.count > 0) {
+                    const badge = document.getElementById('officer-apps-badge');
+                    if (badge) {
+                        badge.textContent   = data.count;
+                        badge.style.display = 'inline-block';
+                    }
                 }
             }).catch(() => {});
     }
@@ -718,7 +947,7 @@ function renderClubsTable(clubs) {
     const fas = allUsers.filter(u => u.role === 'faculty_advisor');
 
     if (!clubs.length) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--t2); padding:20px;">No clubs exist yet. Create clubs via the Admin Panel.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--t2); padding:20px;">No clubs yet. Use the form above to add one.</td></tr>`;
         tableEl.style.display = 'table';
         return;
     }
@@ -742,14 +971,17 @@ function renderClubsTable(clubs) {
                    <option value="">— Remove FA —</option>
                    ${faOptions}
                  </select>`
-              : `<span style="color:var(--amber); font-size:.78rem;">No Faculty Advisors yet. Grant FA role to a user first.</span>`
+              : `<span style="color:var(--amber); font-size:.78rem;">No Faculty Advisors yet. Grant FA role first.</span>`
             }
           </td>
           <td>
-            ${fas.length
-              ? `<button class="btn btn-outline btn-sm" onclick="assignFA('${c._id}', '${c.name}')">Assign</button>`
-              : '—'
-            }
+            <div style="display:flex; gap:6px;">
+              ${fas.length
+                ? `<button class="btn btn-outline btn-sm" onclick="assignFA('${c._id}', '${c.name.replace(/'/g, "\\'")}')">Assign</button>`
+                : '—'
+              }
+              <button class="btn btn-outline btn-sm" style="color:var(--red); border-color:rgba(239,68,68,.3);" onclick="deleteClub('${c._id}', '${c.name.replace(/'/g, "\\'")}')">🗑️ Delete</button>
+            </div>
           </td>
         </tr>`;
     }).join('');
@@ -779,6 +1011,39 @@ window.assignFA = async function(clubId, clubName) {
         );
     } catch { showToast('Network error', 'error'); }
 };
+
+window.deleteClub = async function(clubId, clubName) {
+    if (!confirm(`Delete club "${clubName}"? This cannot be undone.`)) return;
+    try {
+        const res  = await fetch(`${API}/api/clubs/${clubId}`, {
+            method: 'DELETE', headers: authHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Delete failed', 'error'); return; }
+        allClubs = allClubs.filter(c => c._id !== clubId);
+        renderClubsTable(allClubs);
+        showToast(`Club "${clubName}" deleted ✓`, 'success');
+    } catch { showToast('Network error', 'error'); }
+};
+
+document.getElementById('create-club-btn')?.addEventListener('click', async () => {
+    const name = document.getElementById('new-club-name')?.value.trim();
+    const desc = document.getElementById('new-club-desc')?.value.trim();
+    if (!name) { showToast('Club name is required', 'warning'); return; }
+    try {
+        const res  = await fetch(`${API}/api/clubs`, {
+            method: 'POST', headers: authHeaders(),
+            body: JSON.stringify({ name, description: desc }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Create failed', 'error'); return; }
+        allClubs = [...allClubs, data];
+        renderClubsTable(allClubs);
+        document.getElementById('new-club-name').value = '';
+        document.getElementById('new-club-desc').value = '';
+        showToast(`Club "${name}" created ✓`, 'success');
+    } catch { showToast('Network error', 'error'); }
+});
 
 document.getElementById('user-search-btn')?.addEventListener('click', () => {
     const search = document.getElementById('user-search').value.trim();
@@ -891,23 +1156,18 @@ window.inboxAction = function(requestId, action) {
     subtitle.textContent = isApprove
         ? 'The user will be granted Faculty Advisor role and assigned to the club.'
         : 'The request will be rejected. You can add an optional note.';
+    confirmBtn.className = `btn ${isApprove ? 'btn-primary' : 'btn-danger'}`;
     confirmBtn.textContent = isApprove ? '✅ Approve' : '✕ Reject';
     confirmBtn.style.background = isApprove ? 'var(--green)' : 'var(--red)';
     comment.value = '';
 
-    modal.style.display = 'flex';
-
-    // One-shot confirm handler
-    const handler = async () => {
-        const reviewNote = comment.value.trim();
+    actionCallback = async (reviewNote) => {
         try {
             const res  = await fetch(`${API}/api/fa-requests/${requestId}/${action}`, {
                 method: 'PUT', headers: authHeaders(),
                 body: JSON.stringify({ reviewNote }),
             });
             const data = await res.json();
-            modal.style.display = 'none';
-            confirmBtn.removeEventListener('click', handler);
 
             if (!res.ok) { showToast(data.error || 'Action failed', 'error'); return; }
             showToast(
@@ -930,11 +1190,306 @@ window.inboxAction = function(requestId, action) {
             }
         } catch { showToast('Network error', 'error'); }
     };
-    confirmBtn.addEventListener('click', handler, { once: true });
+
+    modal.style.display = 'flex';
+    comment.focus();
 };
 
 // Filter change reloads inbox
 document.getElementById('inbox-filter')?.addEventListener('change', loadInbox);
 document.getElementById('inbox-refresh-btn')?.addEventListener('click', loadInbox);
+
+
+// ── Club Officer Application (Student) ────────────────────────────────────────
+
+let clubsListForOfficerApply = [];
+
+async function loadClubsForOfficerApply() {
+    const clubSel = document.getElementById('oa-club');
+    const noteEl  = document.getElementById('oa-fa-note');
+    if (!clubSel) return;
+
+    clubSel.innerHTML = '<option value="">Loading clubs…</option>';
+    if (noteEl) noteEl.textContent = '';
+
+    try {
+        const res = await fetch(`${API}/api/clubs`, { headers: authHeaders() });
+        if (!res.ok) throw new Error('Failed to load clubs');
+        clubsListForOfficerApply = await res.json();
+
+        clubSel.innerHTML = '<option value="">Select a club…</option>' +
+            clubsListForOfficerApply.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+    } catch {
+        clubSel.innerHTML = '<option value="">Could not load clubs</option>';
+    }
+}
+
+document.getElementById('oa-club')?.addEventListener('change', () => {
+    const clubId = document.getElementById('oa-club').value;
+    const noteEl = document.getElementById('oa-fa-note');
+    if (!noteEl) return;
+
+    const club = clubsListForOfficerApply.find(c => c._id === clubId);
+    if (!club) { noteEl.textContent = ''; return; }
+
+    if (club.facultyAdvisor) {
+        noteEl.innerHTML = `👨‍🏫 <strong>Faculty Advisor:</strong> ${club.facultyAdvisor.name} (${club.facultyAdvisor.email}) — will review your application.`;
+        noteEl.style.color = 'var(--t2)';
+    } else {
+        noteEl.innerHTML = `⚠️ <em>This club has no Faculty Advisor assigned yet. You can only apply once an FA is assigned.</em>`;
+        noteEl.style.color = '#f59e0b';
+    }
+});
+
+document.getElementById('officer-apply-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    document.querySelectorAll('#officer-apply-form .field-error').forEach(el => el.textContent = '');
+
+    const clubId        = document.getElementById('oa-club').value;
+    const requestedRole = document.getElementById('oa-role').value;
+    const statement     = document.getElementById('oa-statement').value.trim();
+
+    let hasError = false;
+    if (!clubId) {
+        document.getElementById('err-oa-club').textContent = 'Please select a club';
+        hasError = true;
+    }
+    if (!requestedRole) {
+        document.getElementById('err-oa-role').textContent = 'Please select a role';
+        hasError = true;
+    }
+    if (!statement) {
+        document.getElementById('err-oa-statement').textContent = 'Please enter your motivation statement';
+        hasError = true;
+    }
+    if (hasError) return;
+
+    const btn = document.getElementById('submit-officer-btn');
+    const txt = document.getElementById('submit-officer-text');
+    btn.disabled = true;
+    txt.textContent = 'Submitting…';
+
+    try {
+        const res = await fetch(`${API}/api/officer-requests`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ clubId, requestedRole, statement }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.error || 'Failed to submit application', 'error');
+            return;
+        }
+
+        showToast('Application submitted! Your Faculty Advisor will review it. 🎉', 'success');
+        document.getElementById('officer-apply-form').reset();
+        document.getElementById('oa-fa-note').textContent = '';
+        switchPanel('my-officer-requests');
+    } catch {
+        showToast('Network error while submitting application', 'error');
+    } finally {
+        btn.disabled = false;
+        txt.textContent = 'Submit Application';
+    }
+});
+
+// ── Student: My Officer Requests ──────────────────────────────────────────────
+
+async function loadMyOfficerRequests() {
+    const loadEl  = document.getElementById('my-officer-req-loading');
+    const emptyEl = document.getElementById('my-officer-req-empty');
+    const listEl  = document.getElementById('my-officer-req-list');
+    if (!loadEl || !listEl) return;
+
+    loadEl.style.display  = 'block';
+    emptyEl.style.display = 'none';
+    listEl.style.display  = 'none';
+    listEl.innerHTML      = '';
+
+    try {
+        const res  = await fetch(`${API}/api/officer-requests/mine`, { headers: authHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        loadEl.style.display = 'none';
+        if (!data.length) { emptyEl.style.display = 'block'; return; }
+
+        listEl.style.display = 'block';
+        listEl.innerHTML = data.map(r => {
+            const clubName = r.club?.name || 'Unknown Club';
+            const roleName = r.requestedRole === 'president' ? '🏆 President' : '📝 Secretary';
+            const chip = STATUS_CHIP[r.status] || '';
+            const date = new Date(r.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+            const stmtHtml = r.statement
+                ? `<div class="fa-request-note" style="margin-top:8px;">"${r.statement}"</div>`
+                : '';
+            const reviewHtml = r.reviewNote
+                ? `<div class="proposal-comment" style="margin-top:8px;">
+                     <strong>FA's Note:</strong> ${r.reviewNote}
+                   </div>`
+                : '';
+
+            return `
+            <div class="fa-request-card" id="my-officer-req-${r._id}">
+              <div class="fa-request-card-header">
+                <div>
+                  <div class="fa-request-person">${clubName} &nbsp;—&nbsp; <span style="color:var(--primary);">${roleName}</span></div>
+                  <div class="fa-request-meta">Submitted on ${date}</div>
+                </div>
+                ${chip}
+              </div>
+              ${stmtHtml}
+              ${reviewHtml}
+            </div>`;
+        }).join('');
+    } catch (err) {
+        loadEl.style.display = 'none';
+        listEl.style.display = 'block';
+        listEl.innerHTML = `<p style="color:var(--red); padding:20px;">Error: ${err.message}</p>`;
+    }
+}
+
+// ── FA Review: Officer Applications ───────────────────────────────────────────
+
+async function loadOfficerApplications() {
+    const loadEl  = document.getElementById('officer-apps-loading');
+    const emptyEl = document.getElementById('officer-apps-empty');
+    const listEl  = document.getElementById('officer-apps-list');
+    if (!loadEl || !listEl) return;
+
+    loadEl.style.display  = 'block';
+    emptyEl.style.display = 'none';
+    listEl.style.display  = 'none';
+    listEl.innerHTML      = '';
+
+    const status = document.getElementById('officer-apps-filter')?.value || 'pending';
+
+    try {
+        const res  = await fetch(`${API}/api/officer-requests/pending?status=${status}`, { headers: authHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        loadEl.style.display = 'none';
+        if (!data.length) { emptyEl.style.display = 'block'; return; }
+
+        listEl.style.display = 'block';
+        listEl.innerHTML = data.map(r => {
+            const person   = r.applicant?.name  || 'Unknown';
+            const email    = r.applicant?.email || '—';
+            const deptYear = [r.applicant?.department, r.applicant?.year ? `Year ${r.applicant.year}` : ''].filter(Boolean).join(' · ');
+            const club     = r.club?.name || 'Club';
+            const roleName = r.requestedRole === 'president' ? '🏆 President' : '📝 Secretary';
+            const date     = new Date(r.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+            const chip     = STATUS_CHIP[r.status] || '';
+            const stmtHtml = r.statement
+                ? `<div class="fa-request-note">"${r.statement}"</div>`
+                : '';
+            const reviewHtml = r.reviewNote
+                ? `<div class="proposal-comment" style="margin-top:8px;">
+                     <strong>Reviewed by ${r.reviewedBy?.name || 'FA'}:</strong> ${r.reviewNote}
+                   </div>`
+                : '';
+            const actions = r.status === 'pending'
+                ? `<button class="btn btn-outline btn-sm" style="color:var(--green);border-color:rgba(34,197,94,.3);"
+                           onclick="officerAppAction('${r._id}', 'approve')">✅ Approve</button>
+                   <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(239,68,68,.3);"
+                           onclick="officerAppAction('${r._id}', 'reject')">✕ Reject</button>`
+                : `<span style="color:var(--t3); font-size:.78rem;">
+                     Reviewed on ${new Date(r.reviewedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short' })}
+                   </span>`;
+
+            return `
+            <div class="fa-request-card" id="officer-req-${r._id}">
+              <div class="fa-request-card-header">
+                <div>
+                  <div class="fa-request-person">🎓 ${person} &nbsp;·&nbsp; <span style="color:var(--primary);">${roleName}</span></div>
+                  <div class="fa-request-meta">
+                    ${email} ${deptYear ? `&nbsp;·&nbsp; ${deptYear}` : ''} &nbsp;·&nbsp;
+                    Applying for <strong style="color:var(--t1);">${club}</strong>
+                    &nbsp;·&nbsp; ${date}
+                  </div>
+                </div>
+                ${chip}
+              </div>
+              ${stmtHtml}
+              ${reviewHtml}
+              <div class="fa-request-actions">${actions}</div>
+            </div>`;
+        }).join('');
+
+        // Update badge count
+        if (status === 'pending') {
+            const badge = document.getElementById('officer-apps-badge');
+            if (badge) {
+                badge.textContent   = data.length || '';
+                badge.style.display = data.length ? 'inline-block' : 'none';
+            }
+        }
+    } catch (err) {
+        loadEl.style.display = 'none';
+        listEl.style.display = 'block';
+        listEl.innerHTML = `<p style="color:var(--red); padding:20px;">Error: ${err.message}</p>`;
+    }
+}
+
+window.officerAppAction = function(requestId, action) {
+    const isApprove = action === 'approve';
+
+    const modal      = document.getElementById('action-modal');
+    const title      = document.getElementById('action-modal-title');
+    const subtitle   = document.getElementById('action-modal-subtitle');
+    const comment    = document.getElementById('action-comment');
+    const confirmBtn = document.getElementById('action-confirm-btn');
+
+    title.textContent    = isApprove ? 'Approve Officer Application' : 'Reject Officer Application';
+    subtitle.textContent = isApprove
+        ? 'The student will become the club officer and gain event proposal privileges.'
+        : 'The application will be rejected. You can add an optional note.';
+    confirmBtn.className = `btn ${isApprove ? 'btn-primary' : 'btn-danger'}`;
+    confirmBtn.textContent = isApprove ? '✅ Approve' : '✕ Reject';
+    confirmBtn.style.background = isApprove ? 'var(--green)' : 'var(--red)';
+    comment.value = '';
+
+    actionCallback = async (reviewNote) => {
+        try {
+            const res  = await fetch(`${API}/api/officer-requests/${requestId}/${action}`, {
+                method: 'PUT',
+                headers: authHeaders(),
+                body: JSON.stringify({ reviewNote }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                showToast(data.error || 'Action failed', 'error');
+                return;
+            }
+
+            showToast(
+                isApprove ? 'Application approved! Officer privileges granted ✓' : 'Application rejected',
+                isApprove ? 'success' : 'warning'
+            );
+            loadOfficerApplications();
+
+            // Refresh pending badge count
+            fetch(`${API}/api/officer-requests/count`, { headers: authHeaders() })
+                .then(r => r.json())
+                .then(d => {
+                    const badge = document.getElementById('officer-apps-badge');
+                    if (badge) {
+                        badge.textContent   = d.count || '';
+                        badge.style.display = d.count > 0 ? 'inline-block' : 'none';
+                    }
+                }).catch(() => {});
+        } catch {
+            showToast('Network error', 'error');
+        }
+    };
+
+    modal.style.display = 'flex';
+    comment.focus();
+};
+
+document.getElementById('officer-apps-filter')?.addEventListener('change', loadOfficerApplications);
+document.getElementById('officer-apps-refresh-btn')?.addEventListener('click', loadOfficerApplications);
+
 
 

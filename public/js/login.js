@@ -53,6 +53,8 @@ const regEmailInput    = document.getElementById('reg-email');
 const emailChip        = document.getElementById('email-type-chip');
 const deptGroup        = document.getElementById('reg-dept-group');
 const yearGroup        = document.getElementById('reg-year-group');
+const interestsGroup   = document.getElementById('reg-interests-group');
+const officerGroup     = document.getElementById('reg-officer-group');
 const facultyNotice    = document.getElementById('faculty-reg-notice');
 
 function applyEmailUI(email) {
@@ -61,9 +63,11 @@ function applyEmailUI(email) {
     updateEmailBorderClass(regEmailInput, email);
 
     const isFaculty = (type === 'faculty');
-    deptGroup.style.display     = isFaculty ? 'none' : '';
-    yearGroup.style.display     = isFaculty ? 'none' : '';
-    facultyNotice.style.display = isFaculty ? 'flex' : 'none';
+    if (deptGroup) deptGroup.style.display           = isFaculty ? 'none' : '';
+    if (yearGroup) yearGroup.style.display           = isFaculty ? 'none' : '';
+    if (interestsGroup) interestsGroup.style.display = isFaculty ? 'none' : '';
+    if (officerGroup) officerGroup.style.display     = isFaculty ? 'none' : '';
+    if (facultyNotice) facultyNotice.style.display   = isFaculty ? 'flex' : 'none';
 }
 
 regEmailInput.addEventListener('input',  () => applyEmailUI(regEmailInput.value));
@@ -174,9 +178,10 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         if (emailType === 'faculty' && !['faculty_advisor', 'principal', 'admin'].includes(data.user.role)) {
             await showFARequestStep();
         } else {
-            // Normal redirect
+            // Normal redirect: staff / approvers to profile, students to homepage
+            const targetUrl = ['principal', 'faculty_advisor', 'admin'].includes(data.user.role) ? '/profile.html' : '/';
             showToast(`Welcome back, ${data.user.name.split(' ')[0]} 👋`, 'success');
-            setTimeout(() => { window.location.replace('/'); }, 700);
+            setTimeout(() => { window.location.replace(targetUrl); }, 700);
         }
     } catch { showError('login-error', 'Network error — please try again.'); setLoading('login-submit-btn', 'login-btn-text', false, 'Sign In'); }
 });
@@ -243,6 +248,78 @@ document.getElementById('fa-skip-btn').addEventListener('click', () => {
     setTimeout(() => { window.location.replace('/'); }, 700);
 });
 
+// ─── Interest Tags Logic ──────────────────────────────────────────────────────
+const regTagChipsContainer = document.getElementById('reg-tag-chips');
+const regNewTagInput = document.getElementById('reg-new-tag-input');
+const btnAddRegTag = document.getElementById('btn-add-reg-tag');
+const selectedInterests = new Set(['Robotics', 'Coding & Hackathons', 'AI & Machine Learning']);
+
+async function loadRegistrationTags() {
+    if (!regTagChipsContainer) return;
+    try {
+        const res = await fetch('/api/tags');
+        const tags = await res.json();
+        renderRegTagChips(tags);
+    } catch (e) {
+        console.warn('Failed to fetch tags for registration:', e);
+    }
+}
+
+function renderRegTagChips(availableTags) {
+    if (!regTagChipsContainer) return;
+    const allTagNames = Array.from(new Set([
+        ...availableTags.map(t => t.name),
+        ...selectedInterests
+    ]));
+
+    regTagChipsContainer.innerHTML = allTagNames.map(name => {
+        const isActive = selectedInterests.has(name);
+        return `<span class="tag-chip ${isActive ? 'active' : ''}" data-tag="${name}">
+            ${isActive ? '✓' : '+'} ${name}
+        </span>`;
+    }).join('');
+
+    regTagChipsContainer.querySelectorAll('.tag-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const tag = chip.dataset.tag;
+            if (selectedInterests.has(tag)) {
+                selectedInterests.delete(tag);
+                chip.classList.remove('active');
+                chip.textContent = `+ ${tag}`;
+            } else {
+                selectedInterests.add(tag);
+                chip.classList.add('active');
+                chip.textContent = `✓ ${tag}`;
+            }
+        });
+    });
+}
+
+function addNewCustomRegTag() {
+    if (!regNewTagInput) return;
+    const val = regNewTagInput.value.trim();
+    if (!val) return;
+    selectedInterests.add(val);
+    regNewTagInput.value = '';
+    fetch('/api/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: val })
+    }).catch(() => {});
+    loadRegistrationTags();
+}
+
+if (btnAddRegTag) btnAddRegTag.addEventListener('click', addNewCustomRegTag);
+if (regNewTagInput) {
+    regNewTagInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addNewCustomRegTag();
+        }
+    });
+}
+loadRegistrationTags();
+
 // ─── Register ─────────────────────────────────────────────────────────────────
 document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -267,12 +344,32 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     else if (password.length < 6) setFE('err-reg-pw', 'Password must be at least 6 characters.');
     if (!valid) return;
 
+    // Check if applying for club officer
+    const isOfficer     = document.getElementById('reg-is-officer-checkbox')?.checked;
+    const officerClubId = document.getElementById('reg-officer-club')?.value;
+    const officerRole   = document.getElementById('reg-officer-role')?.value;
+    const officerStmt   = document.getElementById('reg-officer-statement')?.value.trim();
+
+    if (isOfficer) {
+        if (!officerClubId) {
+            showError('register-error', 'Please select a club for your officer application.');
+            return;
+        }
+        if (!officerStmt) {
+            showError('register-error', 'Please enter a motivation statement explaining why you should hold this leadership role.');
+            return;
+        }
+    }
+
     setLoading('register-submit-btn', 'register-btn-text', true, 'Creating account…');
     try {
         const res  = await fetch('/api/auth/register', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             // role intentionally omitted — server always assigns 'student'
-            body: JSON.stringify({ name, email, password, department: dept, year, phone }),
+            body: JSON.stringify({
+                name, email, password, department: dept, year, phone,
+                interests: Array.from(selectedInterests)
+            }),
         });
         const data = await res.json();
         setLoading('register-submit-btn', 'register-btn-text', false, 'Create Account');
@@ -287,9 +384,89 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         // Faculty email registered → show FA step
         if (detectEmailType(email) === 'faculty') {
             await showFARequestStep();
+        } else if (isOfficer) {
+            try {
+                const offRes = await fetch('/api/officer-requests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.token}` },
+                    body: JSON.stringify({
+                        clubId: officerClubId,
+                        requestedRole: officerRole,
+                        statement: officerStmt,
+                    }),
+                });
+                const offData = await offRes.json();
+                if (!offRes.ok) {
+                    showToast(offData.error || 'Account created, but officer request failed.', 'warning');
+                } else {
+                    showToast('Account created & Officer Application sent to Faculty Advisor! 🎉', 'success');
+                }
+            } catch {
+                showToast('Account created! Submit officer request in Profile.', 'warning');
+            }
+            setTimeout(() => { window.location.replace('/profile.html'); }, 900);
         } else {
             showToast('Account created! Welcome 🎉', 'success');
             setTimeout(() => { window.location.replace('/'); }, 800);
         }
     } catch { showError('register-error', 'Network error — please try again.'); setLoading('register-submit-btn', 'register-btn-text', false, 'Create Account'); }
 });
+
+// ─── Registration Officer Checkbox & Sub-form ────────────────────────────────
+let regClubsList = [];
+
+async function loadClubsForRegistration() {
+    const sel = document.getElementById('reg-officer-club');
+    if (!sel || regClubsList.length > 0) return;
+    sel.innerHTML = '<option value="">Loading clubs…</option>';
+    try {
+        const res = await fetch('/api/clubs');
+        regClubsList = await res.json();
+        sel.innerHTML = '<option value="">— Choose a club —</option>' +
+            regClubsList.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+    } catch {
+        sel.innerHTML = '<option value="">Could not load clubs</option>';
+    }
+}
+
+document.getElementById('reg-is-officer-checkbox')?.addEventListener('change', (e) => {
+    const fields = document.getElementById('reg-officer-fields');
+    if (fields) {
+        fields.style.display = e.target.checked ? 'block' : 'none';
+        if (e.target.checked) loadClubsForRegistration();
+    }
+});
+
+document.getElementById('reg-officer-club')?.addEventListener('change', () => {
+    const clubId = document.getElementById('reg-officer-club').value;
+    const noteEl = document.getElementById('reg-officer-fa-note');
+    if (!noteEl) return;
+    const club = regClubsList.find(c => c._id === clubId);
+    if (!club) { noteEl.textContent = ''; return; }
+    if (club.facultyAdvisor) {
+        noteEl.innerHTML = `👨‍🏫 <strong>Faculty Advisor:</strong> ${club.facultyAdvisor.name} (${club.facultyAdvisor.email}) — will review your application.`;
+        noteEl.style.color = 'var(--t2)';
+    } else {
+        noteEl.innerHTML = `⚠️ <em>This club has no Faculty Advisor assigned yet. You can only apply once an FA is assigned.</em>`;
+        noteEl.style.color = '#f59e0b';
+    }
+});
+
+// ─── Demo Fast Fill Handlers ──────────────────────────────────────────────────
+document.getElementById('demo-fill-faculty')?.addEventListener('click', () => {
+    document.getElementById('login-email').value = 'prof.mathew@mace.ac.in';
+    document.getElementById('login-password').value = 'password123';
+});
+document.getElementById('demo-fill-principal')?.addEventListener('click', () => {
+    document.getElementById('login-email').value = 'principal@mace.ac.in';
+    document.getElementById('login-password').value = 'principal2026';
+});
+document.getElementById('demo-fill-president')?.addEventListener('click', () => {
+    document.getElementById('login-email').value = 'b24co052@mace.ac.in';
+    document.getElementById('login-password').value = 'student123';
+});
+document.getElementById('demo-fill-student')?.addEventListener('click', () => {
+    document.getElementById('login-email').value = 'b24co013@mace.ac.in';
+    document.getElementById('login-password').value = 'student123';
+});
+

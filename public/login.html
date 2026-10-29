@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Sign in or create your MACE FestHub account to register for campus events." />
-  <title>Login — MACE FestHub</title>
+  <meta name="description" content="Sign in or create your MACE EventHub account to register for campus events." />
+  <title>Login — MACE EventHub</title>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body class="auth-page">
@@ -19,7 +19,7 @@
     <div class="navbar-inner">
       <a href="/" class="nav-logo">
         <span class="logo-icon">⚡</span>
-        MACE FestHub
+        MACE EventHub
       </a>
       <div class="nav-links">
         <a href="/">Events</a>
@@ -34,7 +34,7 @@
       <!-- Logo / Brand -->
       <div class="auth-brand">
         <div class="auth-logo">⚡</div>
-        <h1 class="auth-title">MACE FestHub</h1>
+        <h1 class="auth-title">MACE EventHub</h1>
         <p class="auth-subtitle">Campus Event Registration Portal</p>
       </div>
 
@@ -89,6 +89,17 @@
         <p class="auth-hint">
           Faculty Advisors and the Principal log in here using their assigned credentials.
         </p>
+
+        <!-- Quick Demo Fast Fill Buttons -->
+        <div style="margin-top:14px; text-align:center; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+          <div style="font-size:0.75rem; color:var(--t3); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">Demo Quick Fill</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+            <button type="button" class="btn btn-sm btn-outline" id="demo-fill-faculty" style="font-size:0.75rem; padding:4px 9px;">👨‍🏫 Prof. Mathew (Faculty)</button>
+            <button type="button" class="btn btn-sm btn-outline" id="demo-fill-principal" style="font-size:0.75rem; padding:4px 9px;">🏛️ Principal</button>
+            <button type="button" class="btn btn-sm btn-outline" id="demo-fill-president" style="font-size:0.75rem; padding:4px 9px;">📋 President (Robotics)</button>
+            <button type="button" class="btn btn-sm btn-outline" id="demo-fill-student" style="font-size:0.75rem; padding:4px 9px;">🎓 Student (b24co013)</button>
+          </div>
+        </div>
       </div>
 
       <!-- ── Register Panel ─────────────────────────────────── -->
@@ -145,6 +156,54 @@
               <label for="reg-phone">Phone</label>
               <input type="tel" id="reg-phone"
                      placeholder="+91 XXXXX XXXXX" autocomplete="tel" />
+            </div>
+
+            <!-- Interest Tracks / Themes Tag Selector -->
+            <div class="form-group full" id="reg-interests-group">
+              <label>
+                Interested Tracks &amp; Themes
+                <span class="label-hint">(Select tracks you enjoy — get auto-notified when matching events drop!)</span>
+              </label>
+              <div class="tag-selector-wrap" id="reg-tag-selector">
+                <div class="tag-chips-container" id="reg-tag-chips" style="margin-bottom:8px;"></div>
+                <div class="tag-input-row" style="display:flex; gap:8px;">
+                  <input type="text" id="reg-new-tag-input" placeholder="Type custom interest track &amp; add (e.g. Drone Racing)" style="flex:1;" />
+                  <button type="button" class="btn btn-outline btn-sm" id="btn-add-reg-tag" style="white-space:nowrap;">+ Add</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Apply for Club Officer checkbox & fields -->
+            <div class="form-group full" id="reg-officer-group" style="margin-top:4px;">
+              <div style="background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.25); border-radius:var(--r); padding:12px 14px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; font-size:0.88rem; color:var(--t1); margin-bottom:0;">
+                  <input type="checkbox" id="reg-is-officer-checkbox" style="width:16px; height:16px; accent-color:var(--primary); cursor:pointer;" />
+                  <span>🏅 I am / wish to be a Club Officer (President / Secretary)</span>
+                </label>
+                <div id="reg-officer-fields" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.12);">
+                  <div style="font-size:0.8rem; color:var(--t2); margin-bottom:10px; line-height:1.4;">
+                    Select your club and position. Your application will be sent to the club's <strong>Faculty Advisor</strong> for review &amp; approval.
+                  </div>
+                  <div class="form-group" style="margin-bottom:10px;">
+                    <label for="reg-officer-club">Club *</label>
+                    <select id="reg-officer-club" style="width:100%; background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); padding:8px 12px; color:var(--t1); font-size:0.88rem;">
+                      <option value="">Loading clubs…</option>
+                    </select>
+                    <small id="reg-officer-fa-note" style="color:var(--t3); font-size:.78rem; margin-top:4px; display:block;"></small>
+                  </div>
+                  <div class="form-group" style="margin-bottom:10px;">
+                    <label for="reg-officer-role">Position / Role *</label>
+                    <select id="reg-officer-role" style="width:100%; background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); padding:8px 12px; color:var(--t1); font-size:0.88rem;">
+                      <option value="president">🏆 Club President</option>
+                      <option value="secretary">📝 Club Secretary</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label for="reg-officer-statement">Motivation / Statement *</label>
+                    <textarea id="reg-officer-statement" rows="2" placeholder="Briefly state your leadership background or motivation for this club role…" style="width:100%; background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); padding:8px 12px; color:var(--t1); font-size:0.88rem;"></textarea>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

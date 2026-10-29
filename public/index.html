@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Browse and register for MACE campus fest events — technical, cultural, sports, and workshops." />
-  <title>MACE FestHub — Campus Event Registration</title>
+  <meta name="description" content="Browse and register for MACE campus events — technical, cultural, sports, and workshops." />
+  <title>MACE EventHub — Campus Event Registration</title>
   <link rel="stylesheet" href="/css/style.css" />
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
@@ -15,7 +15,7 @@
     <div class="navbar-inner">
       <a href="/" class="nav-logo">
         <span class="logo-icon">⚡</span>
-        MACE FestHub
+        MACE EventHub
       </a>
       <div class="nav-links" id="nav-links">
         <a href="/" class="active" id="nav-home">Events</a>
@@ -54,6 +54,13 @@
     </div>
   </div>
 
+  <!-- ── Track / Interest Quick Filter Bar ─────────────────────── -->
+  <div class="track-filter-bar" id="track-filter-bar">
+    <span class="track-filter-label">Tracks:</span>
+    <button class="track-pill active" data-track="all">All Tracks</button>
+    <!-- Dynamic track pills loaded from /api/tags -->
+  </div>
+
   <!-- ── Events Grid ─────────────────────────────────────────── -->
   <main class="events-section" id="main-content">
     <div id="loading" class="loading-state" aria-live="polite">
@@ -88,6 +95,13 @@
           <div style="font-size:.75rem; color:var(--t2); margin-bottom:4px;">Registering as</div>
           <div id="strip-name" style="font-weight:600; font-size:.9rem;"></div>
           <div id="strip-email" style="font-size:.78rem; color:var(--t2);"></div>
+        </div>
+
+        <!-- Role restricted notice for non-student accounts (Principal, Faculty Advisor, Admin) -->
+        <div id="role-restricted-notice" style="display:none; margin-bottom:20px; padding:20px; background:rgba(124,58,237,.08); border:1px solid rgba(124,58,237,.3); border-radius:var(--r); text-align:center;">
+          <div style="font-size:2rem; margin-bottom:8px;">🎓</div>
+          <div id="role-notice-title" style="font-weight:700; font-size:1.05rem; color:var(--t1); margin-bottom:6px;">Supervisory Account Active</div>
+          <div id="role-notice-text" style="font-size:.85rem; color:var(--t2); line-height:1.5;"></div>
         </div>
 
         <form id="reg-form" novalidate>
@@ -144,6 +158,36 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ── Floating EventBot Campus AI Assistant ─────────────────── -->
+  <button class="eventbot-float-btn festbot-float-btn" id="eventbot-open-btn" aria-label="Open EventBot AI Assistant">
+    <span class="bot-sparkle">✨</span>
+    <span>EventBot AI</span>
+  </button>
+
+  <div class="eventbot-modal festbot-modal" id="eventbot-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="eventbot-title">
+    <div class="eventbot-header festbot-header">
+      <div class="eventbot-title festbot-title" id="eventbot-title">
+        <span>✨ EventBot Campus AI</span>
+        <span class="eventbot-badge festbot-badge">Gemini Flash</span>
+      </div>
+      <button class="eventbot-close festbot-close" id="eventbot-close-btn" aria-label="Close EventBot">✕</button>
+    </div>
+    <div class="eventbot-messages festbot-messages" id="eventbot-messages">
+      <div class="eventbot-msg festbot-msg bot">
+        👋 Hi! I'm <strong>EventBot</strong>, your MACE EventHub AI guide. Ask me anything about upcoming events, interest tracks, venues, fees, or how to register!
+        <div class="eventbot-quick-chips festbot-quick-chips">
+          <span class="eventbot-quick-chip festbot-quick-chip" data-q="What technical events are happening?">Technical events?</span>
+          <span class="eventbot-quick-chip festbot-quick-chip" data-q="Are there any robotics or coding competitions?">Robotics tracks?</span>
+          <span class="eventbot-quick-chip festbot-quick-chip" data-q="How do I get my entry QR ticket?">QR entry ticket?</span>
+        </div>
+      </div>
+    </div>
+    <form class="eventbot-input-area festbot-input-area" id="eventbot-form">
+      <input type="text" class="eventbot-input festbot-input" id="eventbot-input" placeholder="Ask about events, dates, tracks…" autocomplete="off" />
+      <button type="submit" class="eventbot-send-btn festbot-send-btn" id="eventbot-send-btn" aria-label="Send message">➤</button>
+    </form>
   </div>
 
   <!-- ── Toast Container ─────────────────────────────────────── -->
